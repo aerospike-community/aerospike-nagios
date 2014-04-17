@@ -1,0 +1,143 @@
+clusters:                 # List of clusters to monitor
+  - name: aerospike-sfo   # Name of the cluster
+    seed-host: v14        # Server address/fqdn of any node in cluster
+    seed-port: 3000       # Service port for Aerospike Server on seed-host
+                          # [Default: 3000]
+    alumni: no            # If yes, create config for all nodes this node has
+                          #   ever known
+                          # If no, only create config for currently active nodes
+                          # [Default: no]
+    xdr-port: no          # XDR port to use for XDR stats
+                          # if no do not gather XDR stats
+                          # [Default: no]
+
+services:
+  - name: Client Connections       # Name of this data point
+                                   # Name is displayed in Nagios as:
+                                   #  <cluster_name> - <host_name> - <alert_name>
+                                   #  For non-aggregations and
+                                   #  <cluster_name> - <alert_name>
+                                   #  For aggregations
+    description: no                # Description of this service
+                                   # [Default: no]
+    type: statistics               # Where to find stat: statistics, namespace,
+                                   # or xdr
+    statistic: client_connections  # Name of statistic on server
+    value-type: number             # Type of value returned: number or boolean
+                                   # [default: number]
+    aggregation: no                # Aggregation to used with alert
+                                   # options: no, min, max, sum
+                                   # [Default: no]
+    delta: no                      # If yes measure and report the change since last gather.
+                                   # If no just report the current value.
+                                   # [Default: no]
+    high-critical: 15000           # Alert when value is above 15000
+    high-warning: 10000
+    low-critical: 100              # Alert when value is below 100
+    trend: yes                     # Use value for trends?
+                                   # [Default: yes]
+
+  - name: Cluster Size             # Assume we expect size to be 4
+    type: statistics
+    statistic: cluster_size
+    low-critical: 3
+    high-critical: 5
+
+  - name: Transaction Timeout
+    type: statistics
+    statistic: stat_rw_timeout
+    delta: yes
+    high-warning: 10               # Alert if there was a change of more than 10
+                                   # In a given period
+
+  - name: Storage Out of Space
+    type: statistics
+    statistic: err_out_of_space
+    delta: yes
+    high-critical: 1
+
+  - name: Objects
+    type: statistics
+    statistic: objects
+
+  - name: Used Bytes Disk
+    type: statistics
+    statistic: used-bytes-disk
+
+  - name: Free Percent Disk
+    type: statistics
+    statistic: free-pct-disk
+    low-warning: 30
+    low-critical: 20
+
+  - name: Used Bytes Memory
+    type: statistics
+    statistic: used-bytes-disk
+
+  - name: Free Percent Memory
+    type: statistics
+    statistic: free-pct-disk
+    low-alert: 30
+    low-critical: 20
+
+  - name: System Swapping
+    type: statistics
+    statistic: system_swapping
+    value-type: boolean
+    high-critical: true
+
+  - name: Pending Limit Errors
+    type: statistics
+    statistic: err_rw_pending_limit
+    delta: yes
+
+  - name: Migrate Send
+    type: statistics
+    statistic: migrate_progress_send
+    aggregate: sum
+    high-warning: 1
+
+  - name: Migrate Receive
+    type: statistics
+    statistic: migrate_progress_recv
+    aggregate: sum
+    high-warning: 1
+
+  - name: Up Time
+    type: statistics
+    statistic: uptime
+    low-warning: 60
+
+  - name: Available Percent        # Actual name will become 
+                                   # <cluster name> - <host name> - <Namespace Name> - <Stat Name>
+    type: namespace
+    namespace: all                 # Name of the namespace to get stat from
+                                   # Options: all or namespace name.
+                                   # [Default: all]
+    statistic: available_pct
+    low-warning: 20
+    low-critical: 15
+
+  - name: HWM Breached
+    type: namespace
+    statistic: hwm-breached
+    value-type: boolean
+    high-warning: true
+
+  - name: Stop Writes
+    type: namespace
+    statistic: stop-writes
+    value-type: boolean
+    high-warning: true
+
+  - name: Objects
+    type: namespace
+    statistic: objects
+
+  - name: Used Bytes Disk
+    type: namespace
+    statistic: used-bytes-disk
+
+  - name: Used Bytes Memory
+    type: namespace
+    statistic: used-bytes-memory

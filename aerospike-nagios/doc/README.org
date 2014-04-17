@@ -1,0 +1,47 @@
+* Introduction
+ASNagios to simplifies Nagios configurations for Aerospike clusters.
+The goal is to reduce the complexity to 3 simple steps.
+1. Install Nagios
+2. Add cluster details in ASNagios's config.yml
+3. Run ASNagios and enjoy
+
+The project is not there yet, there are extra steps not yet automated.
+* Features
+- Only need to inform ASNagios about a single node in each cluster you wish to
+  monitor.
+- Can monitor any stat returned by
+  - =asinfo -v 'statistics' [-h <HOST>] [-p <XDR_PORT|HOST_PORT>]=
+  - =asinfo -v 'namespace/<NAMESPACE NAME>' [-h host]=
+- Can monitor changes since the last call (deltas)
+- Can monitor aggregations across all node
+  - Supported aggregations: min, max, sum
+  - Can also monitor the change (delta) since last call.
+* Known Issues
+- Monitoring changes (deltas) needs to be reworked, results may be wrong.
+- Monitoring namespace and xdr stats not yet supported by plugin.
+* Getting Started
+1. Untar the provided package
+2. Add your cluster details to the *clusters* sections of configs/config.yml
+3. run asnagios.py \\
+   =asnagios.py -c configs/config.yml [-o aerospike/]
+4. Copy the generated files to your Nagios conf.d directory: \\
+   Example \\
+   =cp aerospike/* /etc/nagios/conf.d=
+5. Copy *check\_aerospike.py* and *lib/* to where your *$USER1$* macro defined
+   location. \\
+   =cat /etc/nagios/private/resource.cfg | grep USER1= \\
+   =$USER1$=/usr/lib64/nagios/plugins= \\
+   =cp check_aerospike.py lib/ /usr/lib64/nagios/plugins/= \\
+   =chown -R root:root /usr/lib64/nagios/plugins/{check_aerospike.py,lib/}= \\
+   =chmod ugo+x /usr/lib64/nagios/plugins/check_aerospike.py=
+ 6. Finally restart Nagios \\
+    =/etc/init.d/nagios restart=
+* Aerospike Nagios Bootstrap Utility
+The bootstrap utility is named *asnagios.py* it accepts two parameters:
+- Required: =-c <Path to config file>= sample config provided at \\
+  *configs/config.yml*
+- Optional: =-o <Output Directory>= default *aerospike/*
+* Aerospike Nagios Plugin
+See *check\_aerospike.py*, this is the file that Nagios will schedule to perform
+queries against aerospike. Other than copying it to the appropriate location,
+you are not required to interact with it.
