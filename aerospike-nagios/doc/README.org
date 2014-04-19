@@ -21,6 +21,8 @@ The project is not there yet, there are extra steps not yet automated.
 - Monitoring namespace and xdr stats not yet supported by plugin.
 * Getting Started
 1. Untar the provided package
+2. Install dependencies \\
+   =pip install -r requirements.txt=
 2. Add your cluster details to the *clusters* sections of configs/config.yml
 3. run asnagios.py \\
    =asnagios.py -c configs/config.yml [-o aerospike/]
