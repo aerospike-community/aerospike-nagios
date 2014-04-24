@@ -10,6 +10,23 @@ clusters:                 # List of clusters to monitor
     xdr-port: no          # XDR port to use for XDR stats
                           # if no do not gather XDR stats
                           # [Default: no]
+    check-interval: 1     # How often in minutes should we poll each service
+                          # [Default: 1]
+
+general:
+  query-interval: 30   # How often in seconds should each stat be queried
+                       # [Default: 30]
+                       # Depending on service s
+                       # NOTE: This is not how ofter the stat is queried by
+  query-retention: 10  # How many captures will the plugin retain per
+                       # cluster? Delta metrics compute the delta of the
+                       # min and max values.
+                       # [Default: 10]
+                       # Example: let stat X have values [4,5,4]
+                       # the delta of this value will be -1
+                       # If X were [3,4,5] the delta would be 2.
+                       # Deltas are computed using the MIN and MAX values
+                       # DELTA = NEWEST(MIN,MAX) - OLDEST(MIN,MAX)
 
 services:
   - name: Client Connections       # Name of this data point
@@ -28,7 +45,8 @@ services:
     aggregation: no                # Aggregation to used with alert
                                    # options: no, min, max, sum
                                    # [Default: no]
-    delta: no                      # If yes measure and report the change since last gather.
+    delta: no                      # If yes measure and report the change since
+                                   # last gather.
                                    # If no just report the current value.
                                    # [Default: no]
     high-critical: 15000           # Alert when value is above 15000

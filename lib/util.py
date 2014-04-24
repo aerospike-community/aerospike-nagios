@@ -177,3 +177,8 @@ def fqdn_to_ip(fqdn):
     IP address of the host.
     """
     return socket.gethostbyname(fqdn)
+
+def merge_dict(*args):
+    return reduce(lambda x, y: 
+                  dict(itertools.chain(x.iteritems(), y.iteritems()))
+                  , args)

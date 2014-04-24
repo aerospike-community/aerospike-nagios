@@ -36,7 +36,8 @@ def get_data(helper):
                 data = []
 
             # data is stale, lets get some new data
-            if not data or data[0]['time_collected'] + 10 < time():
+            poll_frequency = helper.options.poll_frequency
+            if not data or data[0]['time_collected'] + poll_frequency < time():
                 new_data = {}
                 hosts = cf.find_hosts(helper.options.host
                                       , helper.options.port)
@@ -137,6 +138,8 @@ def summaraize(helper, value):
     host = "%s:%s"%(helper.options.host
                     , helper.options.port)
 
+    # TODO: Use stat name define by config.yml
+    #       Or use this nameing algorithm.
     stat_name = "%s.%s"%(statistic_type, statistic)
     if aggregation:
         stat_name = "%s.%s(%s)"%(host_group, aggregation, stat_name)
@@ -258,6 +261,16 @@ def main():
                       , '--namespace'
                       , help='Name of the namespace to get stat from'
                       , dest='namespace')
+    
+    parser.add_option('-I'
+                      , '--query-interval'
+                      , help='How often in seconds should the stat be queried'
+                      , dest='query_interval')
+    
+    parser.add_option('-R'
+                      , '--query-retention'
+                      , help='How many captures will the plugin retain'
+                      , dest='query_retention')
     
     helper.parse_arguments()
     checker(helper)
