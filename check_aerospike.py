@@ -9,8 +9,8 @@ import tempfile
 import os
 import socket
 from time import time
-from lib.filelock import FileLock
 from pprint import pprint
+from lib.filelock import FileLock
 from pynag.Plugins import PluginHelper, ok, warning, critical, UNKNOWN
 
 def get_data(helper):
@@ -36,8 +36,9 @@ def get_data(helper):
                 data = []
 
             # data is stale, lets get some new data
-            poll_frequency = helper.options.poll_frequency
-            if not data or data[0]['time_collected'] + poll_frequency < time():
+            query_interval = int(helper.options.query_interval)
+            query_retention = int(helper.options.query_retention)
+            if not data or data[0]['time_collected'] + query_interval < time():
                 new_data = {}
                 hosts = cf.find_hosts(helper.options.host
                                       , helper.options.port)
@@ -59,8 +60,8 @@ def get_data(helper):
                 new_data['time_collected'] = time()
 
                 data.insert(0, new_data)
-                if len(data) > 2:
-                    data = data[0:2]
+                if len(data) > query_retention:
+                    data = data[0:query_retention]
                 with open(temppath, 'w') as f:
                     pickle.dump(data, f)
     except FileLock.FileLockException:
@@ -69,7 +70,7 @@ def get_data(helper):
         exit(-1)
     return data
 
-aggregation_functions = set(['sum', 'max', 'min'])
+aggregation_functions = {'sum':sum, 'max':max, 'min':min}
 
 def convert_data(helper, data):
     value_type = helper.options.value_type
@@ -81,6 +82,28 @@ def convert_data(helper, data):
     return [[func(datum) for datum in data_list] for data_list in data]
 
 
+def compute_delta(stat_data):
+    """
+    Change between the the most recent min value and most recent max value.
+    [5,4] => 1 
+    [4,5] => -1
+    [5,4,3] => 2
+    [3,4,5] => -2
+    [3,5,2] => 3
+    [3,2,5] => -3
+    [3,2,5,2] => -3
+    [3,5,2,5] => 3
+    """
+    
+    min_value = min(stat_data)
+    max_value = max(stat_data)
+    min_index = stat_data.index(min_value)
+    max_index = stat_data.index(max_value)
+
+    result = min_value - max_value if min_index < max_index else max_value - min_value
+    
+    return result
+
 def get_value(helper):
     data = get_data(helper)
     statistic_type = helper.options.statistic_type
@@ -88,6 +111,7 @@ def get_value(helper):
     value_type = helper.options.value_type
     delta = helper.options.delta
     aggregation = helper.options.aggregation
+    namespace = helper.options.namespace
 
     if delta == 'y':
         stat_data = data
@@ -100,27 +124,32 @@ def get_value(helper):
     if aggregation not in aggregation_functions:
         host_key = "%s:%s"%(socket.gethostbyname(helper.options.host)
                             , helper.options.port)
-        stat_data = [[value[host_key][statistic_type][statistic]] for value in stat_data]
+        if statistic_type != 'namespace':
+            stat_data = [[value[host_key][statistic_type][statistic]]
+                         for value in stat_data]
+        else:
+            stat_data = [[value[host_key][statistic_type][namespace][statistic]]
+                         for value in stat_data]
+            
         stat_data = convert_data(helper, stat_data)
         agg_func = lambda v: v[0]
     else:
-        stat_data = [[value[statistic_type][statistic] for value in hosts.itervalues()] for hosts in stat_data]
+        if statistic_type != 'namespace':
+            stat_data = [[value[statistic_type][statistic]
+                          for value in hosts.itervalues()] for hosts in stat_data]
+        else:
+            stat_data = [[value[statistic_type][namespace][statistic]
+                          for value in hosts.itervalues()] for hosts in stat_data]
+            
         stat_data = convert_data(helper, stat_data)
-        if aggregation == 'min':
-            agg_func = min
-        elif aggregation == 'max':
-            agg_func = max
-        elif aggregation == 'sum':
-            agg_func = sum
+        agg_func = aggregation_functions[aggregation]
 
     stat_data = [agg_func(data_list) for data_list in stat_data]
-    
     if delta == 'y':
         if len(stat_data) > 1:
-            result = stat_data[0] - stat_data[1]
+            result = compute_delta(stat_data)
         else:
             result = None
-            pass
     else:
         result = stat_data[0]
 

@@ -123,13 +123,14 @@ class AsNagios(object):
     def _bootstrapHostTemplate(cls, output_path):
         pass
         # TODO: Create a host template
+        # TODO: Host template should have a contact group defined by cluster
 
     @classmethod
     def _bootstrapHosts(cls, hosts, cluster_config, output_path):
         pynag.Model.cfg_file = output_path
         for (host_name, (host_address, _)) in hosts.iteritems():
             h = pynag.Model.Host()
-            h.use = 'linux-server'
+            h.use = 'linux-server'  # TODO: Use defined host template
             h.host_name = host_name
             h.alias = host_name
             h.address = host_address
@@ -150,7 +151,13 @@ class AsNagios(object):
         pass
 
     @classmethod
-    def _createService(cls, name, host_groups, service_config, output_path):
+    def _createService(cls
+                       , name
+                       , host_groups
+                       , general_config
+                       , service_config
+                       , output_path
+                       , namespace=None):
         s = pynag.Model.Service()
         s.hostgroup_name = ','.join(host_groups)
         s.use = 'generic-service'
@@ -158,7 +165,9 @@ class AsNagios(object):
         # TODO: this cannot support different nodes using different service/xdr ports :(
         s.check_command = "check_aerospike!%s!%s!%s!%s!%s!%s!%s!%s!%s!%s!%s!%s!%s!%s"%(
             3000  # TODO: Should be port defined in cluster config
+                  #       This will have to be the same for all clusters
             , 'n'  # TODO: Should be xdr port defined in cluster config
+                   #       This will have to be the same for all clusters
             , service_config['type']
             , service_config['statistic']
             , service_config['value-type']
@@ -168,9 +177,9 @@ class AsNagios(object):
             , service_config['low-critical']
             , service_config['high-warning']
             , service_config['low-warning']
-            , service_config['namespace']
-            , 30 # TODO: query interval
-            , 10 # TODO: query retention
+            , namespace
+            , general_config['query-interval']
+            , general_config['query-retention']
         )
             
         s.notification_enabled = 1
@@ -180,26 +189,41 @@ class AsNagios(object):
     def _bootstrapCommand(cls, output_path):
         c = pynag.Model.Command()
         c.command_name = 'check_aerospike'
-        c.command_line = '/usr/bin/python $USER1$/check_aerospike.py -H "$HOSTADDRESS$" -G "$HOSTGROUPNAME$" -P "$ARG1$" -X "$ARG2$" -T "$ARG3$" -S "$ARG4$" -V "$ARG5$" -D "$ARG6$" -A "$ARG7$" -C "$ARG8$" -c "$ARG9$" -W "$ARG10$" -w "$ARG11$" -N "$ARG12$" -I "$ARG14$" -R "$ARG15$"'
+        c.command_line = '/usr/bin/python $USER1$/check_aerospike.py -H "$HOSTADDRESS$" -G "$HOSTGROUPNAME$" -P "$ARG1$" -X "$ARG2$" -T "$ARG3$" -S "$ARG4$" -V "$ARG5$" -D "$ARG6$" -A "$ARG7$" -C "$ARG8$" -c "$ARG9$" -W "$ARG10$" -w "$ARG11$" -N "$ARG12$" -I "$ARG13$" -R "$ARG14$"'
         c.save(filename=output_path)
 
     @classmethod
-    def _bootstrapService(cls, host_groups, namespaces, service_config, output_path):
+    def _bootstrapService(cls
+                          , host_groups
+                          , namespaces
+                          , general_config
+                          , service_config
+                          , output_path):
         if service_config['type'] != 'namespace':
             name = service_config['name']
-            cls._createService(name, host_groups, service_config, output_path)
+            cls._createService(name
+                               , host_groups
+                               , general_config
+                               , service_config
+                               , output_path)
         else:
             namespace = service_config['namespace']
             for (group_name, namespace_list) in namespaces.iteritems():
-                if namespace == 'all' or namespace in namespace_list:
-                    if namespace in namespace_list:
-                        use_list = [namespace]
-                    else:
-                        use_list = namespace_list
-
-                    for namespace in use_list:
-                        name = "%s - %s"%(namespace, service_config['name'])
-                        cls._createService(name, [group_name], service_config, output_path)
+                if namespace in namespace_list:
+                    use_list = [namespace]
+                elif namespace == 'all':
+                    use_list = namespace_list
+                else:
+                    raise ValueError("Provided namespace %s is not 'all' or in the namespace list"%(namespace))
+                
+                for namespace in use_list:
+                    name = "%s - %s"%(namespace, service_config['name'])
+                    cls._createService(name
+                                       , [group_name]
+                                       , general_config
+                                       , service_config
+                                       , output_path
+                                       , namespace=namespace)
 
     @classmethod
     def bootstrap(cls, config_path, output_path):
@@ -221,8 +245,13 @@ class AsNagios(object):
         # cls._bootstrapServiceTemplate(output_path)
         path = cls._createServiceFile(output_path)
         cls._bootstrapCommand(path)
+        general_config = config['general']
         for service_config in service_configs:
-            cls._bootstrapService(host_groups, namespaces, service_config, path)
+            cls._bootstrapService(host_groups
+                                  , namespaces
+                                  , general_config
+                                  , service_config
+                                  , path)
 
 
 def main():
