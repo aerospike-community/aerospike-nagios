@@ -17,8 +17,8 @@ The project is not there yet, there are extra steps not yet automated.
   - Supported aggregations: min, max, sum
   - Can also monitor the change (delta) since last call.
 * Known Issues
-- Monitoring changes (deltas) needs to be reworked, results may be wrong.
-- Monitoring namespace and xdr stats not yet supported by plugin.
+- XDR stats not yet supported by plugin
+- See 'TODO's in code for other known deficiencies. 
 * Getting Started
 1. Untar the provided package
 2. Install dependencies \\
