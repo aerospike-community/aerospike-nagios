@@ -184,9 +184,9 @@ def summaraize(helper, value):
 
 def checker(helper):
     if helper.options.value_type == 'boolean':
-        convert_metric = lambda metric: False if not metric or metric == 'n' else True
+        convert_metric = lambda metric: None if not metric or metric == 'n' else False if metric == 'false' or metric == 'no' or metric == '0' else True
     else:
-        convert_metric = lambda metric: False if not metric or metric == 'n' else True
+        convert_metric = lambda metric: None if not metric or metric == 'n' else float(metric)
 
     high_critical = convert_metric(helper.options.high_critical)
     low_critical = convert_metric(helper.options.low_critical)
@@ -202,13 +202,13 @@ def checker(helper):
     if value == None:
         helper.exit()
 
-    if (low_warning is not False and value <= low_warning):
+    if (low_warning is not None and value <= low_warning):
         helper.status(warning)
-    if (high_warning is not False and value >= high_warning):
+    if (high_warning is not None and value >= high_warning):
         helper.status(warning)
-    if (low_critical is not False and value <= low_critical):
+    if (low_critical is not None and value <= low_critical):
         helper.status(critical)
-    if (high_critical is not False and value >= high_critical):
+    if (high_critical is not None and value >= high_critical):
         helper.status(critical)
 
     helper.exit()
