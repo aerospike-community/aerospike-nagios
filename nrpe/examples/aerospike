@@ -1,0 +1,44 @@
+define service {
+        use                             generic-service
+        host_name                       hostname
+        service_description             FreePctDisk
+					#option1 is the stat, option2 is the warn level, option3 is the cirtical level
+        check_command                   check_nrpe!aerospike free-pct-disk 20 10
+	    contact_groups  	    		admin
+        }
+
+define service {
+        use                             generic-service
+        host_name                       hostname
+        service_description             FreePctMemory
+					#option1 is the stat, option2 is the warn level, option3 is the cirtical level
+        check_command                   check_nrpe!aerospike free-pct-memory 20 10
+	    contact_groups			        admin
+        }
+
+define service {
+        use                             generic-service
+        host_name                       hostname
+        service_description             Namespace_AvailablePct
+					#option1 is the stat, option2 is the warn level, option3 is the cirtical level
+        check_command                   check_nrpe!aerospike_namespace available_pct Namespace 20 10
+	    contact_groups		        	admin
+        }
+
+define service {
+        use                             generic-service
+        host_name                       hostname
+        service_description             Namespace_FreePctDisk
+					#option1 is the stat, option2 is the warn level, option3 is the cirtical level
+        check_command                   check_nrpe!aerospike_namespace free-pct-disk Namespace 20 10
+    	contact_groups		        	admin
+        }
+
+define service {
+        use                             generic-service
+        host_name                       hostname
+        service_description             Namespace_FreePctMemory
+					#option1 is the stat, option2 is the warn level, option3 is the cirtical level
+        check_command                   check_nrpe!aerospike_namespace free-pct-memory Namespace 20 10
+	    contact_groups			        admin
+        }
