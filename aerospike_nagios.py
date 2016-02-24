@@ -51,13 +51,13 @@ try:
 		print "No options supplied."
 		print "%s" %args
 		usage()
-		sys.exit(-1)
+		sys.exit(STATE_UNKNOWN)
 
 ## If we don't get in options passed print usage.
 except getopt.GetoptError, err:
 	print str(err)
 	usage()
-	sys.exit(-1)
+	sys.exit(STATE_UNKNOWN)
 
 for o, a in opts:
 	if (o == "-h" or o == "--host"):
@@ -83,7 +83,7 @@ for o, a in opts:
 		elif re.search(r'\D', a):
 			print "Illegal character(s) in critical option."
 			print "%s" %a
-			sys.exit(-1)
+			sys.exit(STATE_UNKNOWN)
 		else:
 			arg_critical = int(a)
 
@@ -102,7 +102,7 @@ for o, a in opts:
 		elif re.search(r'\D', a):
 			print "Illegal character(s) in critical option."
 			print "%s" %a
-			sys.exit(-1)
+			sys.exit(STATE_UNKNOWN)
 		else:
 			arg_warning = int(a)
 
@@ -110,17 +110,17 @@ for o, a in opts:
 if arg_stat is None:
 	print "A statistic was not supplied."
  	usage()
-	sys.exit(-1)
+	sys.exit(STATE_UNKNOWN)
 
 if arg_critical is None:
 	print "A critical was not supplied."
  	usage()
-	sys.exit(-1)
+	sys.exit(STATE_UNKNOWN)
 
 if arg_warning is None:
 	print "A warning value was not supplied."
  	usage()
-	sys.exit(-1)
+	sys.exit(STATE_UNKNOWN)
 
 ## /Process passed in arguments
 ###
@@ -133,7 +133,12 @@ if arg_warning is None:
 config = {
         'hosts' : [ (arg_host, arg_port) ]
         }
-client = aerospike.client(config).connect()
+try:
+	client = aerospike.client(config).connect()
+except:
+	print("failed to connect to the cluster with", config['hosts'])
+	sys.exit(STATE_UNKNOWN)
+
 r = client.info_node(arg_value,(arg_host,arg_port))
 client.close()
 
