@@ -6,10 +6,10 @@ The previous implementation of the nagios plugin has been moved to the
 
 #Introduction
 
-aerospike_nagios.py simplifies nagios configurations for Aerospike clusters.
+aerospike\_nagios.py simplifies nagios configurations for Aerospike clusters.
 The goal is to reduce the complexity to 2 simple steps.
 
-1. Copy aerospike_nagios.py to your Nagios server
+1. Copy aerospike\_nagios.py to your Nagios server
 2. Add aerospike configs into Nagios
 
 #Features
@@ -27,11 +27,11 @@ The goal is to reduce the complexity to 2 simple steps.
 
 ### Getting Started
 
-1. Copy aerospike_nagios.py to your prefered scripts dir
+1. Copy aerospike\_nagios.py to your prefered scripts dir
 
     > Eg: /opt/aerospike/bin/
 
-1. Add the nagios service definitions for aerospike_nagios.py
+1. Add the nagios service definitions for aerospike\_nagios.py
 
 1. Add the aerospike service to host(s)
 
@@ -40,7 +40,7 @@ The goal is to reduce the complexity to 2 simple steps.
 
 ### Aerospike nagios Plugin
 
-See *aerospike_nagios.py*, this is the file that nagios will schedule to perform
+See *aerospike\_nagios.py*, this is the file that nagios will schedule to perform
 queries against Aerospike. Other than copying it to the appropriate location,
 you are not required to interact with it.
 
@@ -49,6 +49,9 @@ you are not required to interact with it.
     Usage:
      -h host (default 127.0.0.1)
      -p port (default 3000)
+	 -U user (Enterprise only)
+	 -P password (Enterprise only)
+	 -x xdr datacenter (Enterprise 3.7.4+)
      -s "statistic" (Eg: "free-pct-memory")
      -n "namespace" (Eg: "namespace/test")
 
@@ -59,8 +62,11 @@ To monitor all statistics in a namespace:
 `aerospike_nagios.py -h YOUR_ASD_HOST -n YOUR_NAMESPACE`
 
 To monitor a specific general statistic:
-`aerospike_nagios.py -h YOUR_ASD_HOST -s SERVICE_NAME`
+`aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME`
 
 To monitor a specific statistic in a namepsace:
-`aerospike_nagios.py -h YOUR_ASD_HOST -s SERVICE_NAME -n YOUR_NAMESPACE`
+`aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -n YOUR_NAMESPACE`
+
+To monitor a specific statistic from the xdr metrics:
+`aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -x YOUR_DATACENTER_NAME`
 
