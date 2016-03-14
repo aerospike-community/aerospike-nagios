@@ -170,7 +170,7 @@ config = {
         'hosts' : [ (arg_host, arg_port) ]
         }
 try:
-	client = aerospike.client(config).connect([user,password])
+	client = aerospike.client(config).connect(user,password)
 except:
 	print("failed to connect to the cluster with", config['hosts'])
 	sys.exit(STATE_UNKNOWN)
