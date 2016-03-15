@@ -51,7 +51,6 @@ you are not required to interact with it.
      -p port (default 3000)
 	 -U user (Enterprise only)
 	 -P password (Enterprise only)
-	 -x xdr datacenter (Enterprise 3.7.4+)
      -s "statistic" (Eg: "free-pct-memory")
      -n "namespace" (Eg: "namespace/test")
 
