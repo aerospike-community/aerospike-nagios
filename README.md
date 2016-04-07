@@ -54,18 +54,8 @@ you are not required to interact with it.
      -s "statistic" (Eg: "free-pct-memory")
      -n "namespace" (Eg: "namespace/test")
 
-To monitor all general statistics:
-`aerospike_nagios.py -h YOUR_ASD_HOST`
-
-To monitor all statistics in a namespace:
-`aerospike_nagios.py -h YOUR_ASD_HOST -n YOUR_NAMESPACE`
-
 To monitor a specific general statistic:
 `aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME`
 
 To monitor a specific statistic in a namepsace:
 `aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -n YOUR_NAMESPACE`
-
-To monitor a specific statistic from the xdr metrics:
-`aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -x YOUR_DATACENTER_NAME`
-
