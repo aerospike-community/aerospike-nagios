@@ -17,6 +17,7 @@ The goal is to reduce the complexity to 2 simple steps.
 - Can monitor any stat returned by
   - `$ asinfo -v 'statistics' [-h <HOST>]`
   - `$ asinfo -v 'namespace/<NAMESPACE NAME>' [-h host]`
+  - `$ asinfo -v 'dc/<DATACENTER>' [-h host]`
 
 ###Known Issues
 
@@ -49,8 +50,9 @@ you are not required to interact with it.
     Usage:
      -h host (default 127.0.0.1)
      -p port (default 3000)
-	 -U user (Enterprise only)
-	 -P password (Enterprise only)
+     -U user (Enterprise only)
+     -P password (Enterprise only)
+     -x xdr datacenter (Enterprise 3.8+)
      -s "statistic" (Eg: "free-pct-memory")
      -n "namespace" (Eg: "namespace/test")
 
@@ -59,3 +61,6 @@ To monitor a specific general statistic:
 
 To monitor a specific statistic in a namepsace:
 `aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -n YOUR_NAMESPACE`
+
+To monitor a specfic statistic in xdr:
+`aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -x DATACENTER`
