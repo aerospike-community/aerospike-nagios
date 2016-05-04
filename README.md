@@ -24,7 +24,7 @@ The goal is to reduce the complexity to 2 simple steps.
 - Host based monitoring instead of cluster based monitoring
 
 ### Requirements
-1. Aerospike python client. See (this page)[http://www.aerospike.com/docs/client/python/install/]
+1. Aerospike python client. See [this page](http://www.aerospike.com/docs/client/python/install/)
 
 ### Getting Started
 
@@ -55,12 +55,30 @@ you are not required to interact with it.
      -x xdr datacenter (Enterprise 3.8+)
      -s "statistic" (Eg: "free-pct-memory")
      -n "namespace" (Eg: "namespace/test")
+     -c "critical level" (Eg: "60")
+     -w "warning level" (Eg: "70")
 
 To monitor a specific general statistic:
-`aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME`
+`aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -w WARN_LEVEL -c CRIT_LEVEL`
 
 To monitor a specific statistic in a namepsace:
-`aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -n YOUR_NAMESPACE`
+`aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -n YOUR_NAMESPACE -w WARN_LEVEL -c CRIT_LEVEL`
 
 To monitor a specfic statistic in xdr:
-`aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -x DATACENTER`
+`aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -x DATACENTER -w WARN_LEVEL -c CRIT_LEVEL`
+
+### Alert Levels
+
+To not use warning and critical levels, set them both to 0
+
+`free-pct` and `available_pct` metrics are lower thresholds. The conditions are tripped when the value
+is lower than the thresholds specified.
+
+> ie: critical should be *lower* than warning, and metric values should be **above** both.
+
+`cluster_size` thresholds are lower thresholds as well. If a cluster's size falls belows the set threshold,
+a alert state will be triggered.
+
+For everything else, the thresholds are upper thresholds. 
+
+> ie: critical should be *higher* than warning, and metric values should be **below** both.
