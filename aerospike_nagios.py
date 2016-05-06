@@ -25,6 +25,7 @@ __copyright__ = "Copyright 2016 Aerospike"
 __version__ = "1.0.0"
 
 import sys
+import yaml
 import types
 import getopt
 import re
@@ -40,6 +41,7 @@ STATE_DEPENDENT=4
 
 RETURN_VAL=STATE_OK
 
+schema_path = './aerospike_schema.yaml'
 user = None
 password = None
 arg_host = "127.0.0.1"
@@ -50,7 +52,6 @@ arg_warning = None
 arg_critical = None
 
 stat_line = None
-
 
 ###
 def usage():
@@ -195,99 +196,117 @@ if r == None:
 #for arg in arg_stat.split():
 #    this_stat_line=""
 
-num_stat = None
+value = None
 for s in r.split(";"):
     if arg_stat + "=" in s:
-        num_stat = s.split(arg_stat + "=")[-1]
-    if num_stat != None:
-        stat_line = 'Aerospike Stats - ' + arg_stat + "=" + num_stat
+        value = s.split(arg_stat + "=")[-1]
+    if value != None:
+        stat_line = 'Aerospike Stats - ' + arg_stat + "=" + value
+
+#
+# Load schema file
+#
+with open(schema_path) as schema_file:
+    schema = yaml.load(schema_file)
+
+
+#
+# Find  unit of measurement for the statstic
+#
+
+uom = ''
+
+for category in schema:
+    if "operations" in schema[category] and arg_stat in schema[category]["operations"]:
+        uom = 'c'
+        break
+    if "bytes" in schema[category] and arg_stat in schema[category]["bytes"]:
+        uom = 'B'
+        break
+    if "percent" in schema[category] and arg_stat in schema[category]["percent"]:
+        uom = '%'
+        break
 
 
 ###
 ## Comparing the Aerospike value with the warning/critical passed values.
 ## Default comparison is if the Aerospike value is greater than the warning/critical value.
 ## Stats with "pct" in them are checked to see if the Aerospike value is less than the warning/critical value.
-try:
-    num_stat = int(num_stat)
-except:
-    pass
+
+# Cast to int for warn/crit comparisons
 if "dc_state" in arg_stat:
-    if num_stat == 'CLUSTER_UP':
+    if value == 'CLUSTER_UP':
         RETURN_VAL=STATE_OK
     else:
         RETURN_VAL=STATE_CRITICAL
 elif "stop-writes" in arg_stat or "system_swapping" in arg_stat:
-    if num_stat == 'true':
+    if value == 'true':
         RETURN_VAL=STATE_CRITICAL
-    elif num_stat == 'false':
+    elif value == 'false':
         RETURN_VAL=STATE_OK
     else:
         RETURN_VAL=STATE_UNKNOWN
 elif "free-pct" in arg_stat:
     if arg_warning != 0: 
-        if num_stat < arg_warning:
+        if int(value) < arg_warning:
             RETURN_VAL=STATE_WARNING
     if arg_critical != 0:
-        if num_stat < arg_critical:
+        if int(value) < arg_critical:
             RETURN_VAL=STATE_CRITICAL
 elif "available_pct" in arg_stat:
     if arg_warning != 0: 
-        if num_stat < arg_warning:
+        if int(value) < arg_warning:
             RETURN_VAL=STATE_WARNING
     if arg_critical != 0:
-        if num_stat < arg_critical:
+        if int(value) < arg_critical:
             RETURN_VAL=STATE_CRITICAL
 elif "cluster_size" in arg_stat:
     if arg_warning != 0: 
-        if num_stat < arg_warning:
+        if int(value) < arg_warning:
             RETURN_VAL=STATE_WARNING
     if arg_critical != 0:
-        if num_stat < arg_critical:
+        if int(value) < arg_critical:
             RETURN_VAL=STATE_CRITICAL
 elif "cluster_integrity" in arg_stat:
-    if num_stat == 'true':
+    if value == 'true':
         RETURN_VAL=STATE_OK
-    elif num_stat == 'false':
+    elif value == 'false':
         RETURN_VAL=STATE_CRITICAL
     else:
         RETURN_VAL=STATE_UNKNOWN
 elif "xdr-uptime" in arg_stat:
     if arg_warning != 0:
-        if num_stat < arg_warning:
+        if int(value) < arg_warning:
             RETURN_VAL=STATE_WARNING
     if arg_critical != 0:
-        if num_stat < arg_critical:
+        if int(value) < arg_critical:
             RETURN_VAL=STATE_CRITICAL
     else:
         RETURN_VAL=STATE_OK
 else:
     if arg_warning != 0: 
-        if num_stat > arg_warning:
+        if int(value) > arg_warning:
             RETURN_VAL=STATE_WARNING
     if arg_critical != 0:
-        if num_stat > arg_critical:
+        if int(value) > arg_critical:
             RETURN_VAL=STATE_CRITICAL
 
 # Append perf data if data is numeric
 append_perf=True
 try:
-    float(num_stat)
+    float(value)
 except:
     append_perf=False
 
-## /Comparison
-###
+perf_stat = value+uom
         
 ###
 ## Print stat information and the return code for Nagios
-###
+##
 
 if stat_line != "":
     if append_perf:
-        print '%s|%s=%d;%d;%d' % (stat_line,arg_stat,num_stat,arg_warning,arg_critical) 
+        print '%s|%s=%s;%d;%d' % (stat_line,arg_stat,perf_stat,arg_warning,arg_critical) 
     else:
         print '%s' % (stat_line)
     sys.exit(RETURN_VAL)
-
-## /Print
-###
