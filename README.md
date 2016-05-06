@@ -32,9 +32,14 @@ The goal is to reduce the complexity to 2 simple steps.
 
     > Eg: /opt/aerospike/bin/
 
-1. Add the nagios service definitions for aerospike\_nagios.py
+1. Copy aerospike\_schema.yaml to the same directory
 
-1. Add the aerospike service to host(s)
+1. Copy examples/aerospike.cfg into your nagios conf.d directory
+
+   > /etc/nagios/conf.d if installed from repo
+   > /usr/local/nagios/etc/objects if installed from source
+
+1. Edit aerospike.cfg to add your aerospike hosts into the hostgroup
 
 1. Restart/reload nagios
 
