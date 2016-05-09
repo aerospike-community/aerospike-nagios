@@ -39,9 +39,8 @@ STATE_CRITICAL=2
 STATE_UNKNOWN=3
 STATE_DEPENDENT=4
 
-RETURN_VAL=STATE_OK
 
-schema_path = './aerospike_schema.yaml'
+schema_path = '/opt/aerospike/bin/aerospike_schema.yaml'
 user = None
 password = None
 arg_host = "127.0.0.1"
@@ -101,42 +100,9 @@ for o, a in opts:
     if (o == "-p" or o == "--Password"):
         password = a
     if (o == "-c" or o == "--critical"):
-
-        # Do we need to convert to gigabytes
-        if re.search(r'\dg$', a, re.IGNORECASE):
-            arg_critical = int(a[:-1])
-            arg_critical = arg_critical*1024**3
-
-        # Do we need to convert to megabytes
-        elif re.search(r'\dm$', a, re.IGNORECASE):
-            arg_critical = int(a[:-1])
-            arg_critical = arg_critical*1024**2
-
-        elif re.search(r'\D', a):
-            print "Illegal character(s) in critical option."
-            print "%s" %a
-            sys.exit(STATE_UNKNOWN)
-        else:
-            arg_critical = int(a)
-
+        arg_critical = a
     if (o == "-w" or o == "--warning"):
-
-        # Do we need to convert to gigabytes
-        if re.search(r'\dg$', a, re.IGNORECASE):
-            arg_warning = int(a[:-1])
-            arg_warning = arg_warning*1024**3
-
-        # Do we need to convert to megabytes
-        elif re.search(r'\dm$', a, re.IGNORECASE):
-            arg_warning = int(a[:-1])
-            arg_warning = arg_warning*1024**2
-
-        elif re.search(r'\D', a):
-            print "Illegal character(s) in critical option."
-            print "%s" %a
-            sys.exit(STATE_UNKNOWN)
-        else:
-            arg_warning = int(a)
+        arg_warning = a
 
 # Make sure we have a statistic to look for
 if arg_stat is None:
@@ -157,6 +123,39 @@ if arg_warning is None:
 ## /Process passed in arguments
 ###
 
+
+# Takes a range in the format of [@]start:end
+# Negative values also ok
+# See Nagios guidelines: https://nagios-plugins.org/doc/guidelines.html#THRESHOLDFORMAT
+NAGIOS_OUTER_THRESHOLD=0        # alert if ouside range of { start ... end }        eg: 10:20
+NAGIOS_INNER_THRESHOLD=1        # alert if inside range of { start ... end }        eg: @10:20
+
+def parseRange(myRange):
+    # check syntax
+    print myRange
+    match = re.match("^@?(-?\d+|~)$|^@?(-?\d*|~):-?\d+$",myRange)
+    if not match:
+        print "Threshold format is incorrect. The format is: [@]start:end. Entered value: %s"%(myRange)
+        sys.exit(STATE_UNKNOWN)
+    # theshold mode
+    mode = NAGIOS_OUTER_THRESHOLD
+    if myRange.startswith("@"):
+        myRange = myRange.strip("@")
+        mode=NAGIOS_INNER_THRESHOLD
+    # grab start/end values. Start is optional
+    values = myRange.split(":")
+    end = values[-1]
+    if end == '':
+        end = 0
+    try:
+        start = float(values[-2])
+    except:
+        start = 0
+    if start != "~":
+        if float(start) > float(end):
+            print "Error: start threshold is greater than the end threshold: %s"%(myRange)
+            sys.exit(STATE_UNKNOWN)
+    return { "start": start, "end" : int(end), "mode" : mode } 
 
 #
 # MAINLINE
@@ -233,72 +232,63 @@ for category in schema:
 ## Default comparison is if the Aerospike value is greater than the warning/critical value.
 ## Stats with "pct" in them are checked to see if the Aerospike value is less than the warning/critical value.
 
-# Cast to int for warn/crit comparisons
+
+#
+# Parse warn/crit ranges
+
+RETURN_VAL=STATE_OK
+append_perf=False
 if "dc_state" in arg_stat:
-    if value == 'CLUSTER_UP':
-        RETURN_VAL=STATE_OK
-    else:
+    if value != 'CLUSTER_UP':
         RETURN_VAL=STATE_CRITICAL
-elif "stop-writes" in arg_stat or "system_swapping" in arg_stat:
+elif arg_stat in ["stop-writes","system_swapping"]:
     if value == 'true':
         RETURN_VAL=STATE_CRITICAL
-    elif value == 'false':
-        RETURN_VAL=STATE_OK
-    else:
-        RETURN_VAL=STATE_UNKNOWN
-elif "free-pct" in arg_stat:
-    if arg_warning != 0: 
-        if int(value) < arg_warning:
-            RETURN_VAL=STATE_WARNING
-    if arg_critical != 0:
-        if int(value) < arg_critical:
-            RETURN_VAL=STATE_CRITICAL
-elif "available_pct" in arg_stat:
-    if arg_warning != 0: 
-        if int(value) < arg_warning:
-            RETURN_VAL=STATE_WARNING
-    if arg_critical != 0:
-        if int(value) < arg_critical:
-            RETURN_VAL=STATE_CRITICAL
-elif "cluster_size" in arg_stat:
-    if arg_warning != 0: 
-        if int(value) < arg_warning:
-            RETURN_VAL=STATE_WARNING
-    if arg_critical != 0:
-        if int(value) < arg_critical:
-            RETURN_VAL=STATE_CRITICAL
-elif "cluster_integrity" in arg_stat:
-    if value == 'true':
-        RETURN_VAL=STATE_OK
-    elif value == 'false':
+elif arg_stat in ["cluster_integrity"]:
+    if value == 'false':
         RETURN_VAL=STATE_CRITICAL
-    else:
-        RETURN_VAL=STATE_UNKNOWN
-elif "xdr-uptime" in arg_stat:
-    if arg_warning != 0:
-        if int(value) < arg_warning:
-            RETURN_VAL=STATE_WARNING
-    if arg_critical != 0:
-        if int(value) < arg_critical:
-            RETURN_VAL=STATE_CRITICAL
-    else:
-        RETURN_VAL=STATE_OK
 else:
-    if arg_warning != 0: 
-        if int(value) > arg_warning:
-            RETURN_VAL=STATE_WARNING
-    if arg_critical != 0:
-        if int(value) > arg_critical:
-            RETURN_VAL=STATE_CRITICAL
+    # Append perfdata iff metric value is numeric
+    try:
+        value = float(value)
+		append_perf=True
+    except:
+	    pass
+    # Warning threshold first
+    if arg_warning != "0":
+        warn = parseRange(arg_warning)
+        if warn["mode"] == NAGIOS_OUTER_THRESHOLD:
+            if warn["start"] == "~":
+                if value >=  warn["end"]:
+                    RETURN_VAL=STATE_WARNING
+            elif value < warn["start"] or value >= warn["end"]:
+                    RETURN_VAL=STATE_WARNING
+        else: # NAGIOS_INNER_THRESHOLD
+            if warn["start"] == "~":
+                if value <  warn["end"]:
+                    RETURN_VAL=STATE_WARNING
+            elif value > warn["start"] and value < warn["end"]:
+                    RETURN_VAL=STATE_WARNING
+    # Critical threshold override warning threshold
+    if arg_critical != "0":
+        crit = parseRange(arg_critical)
+        if crit["mode"] == NAGIOS_OUTER_THRESHOLD:
+            if crit["start"] == "~":
+                if value >=  crit["end"]:
+                    RETURN_VAL=STATE_CRITICAL
+            elif value < crit["start"] or value >= crit["end"]:
+                    RETURN_VAL=STATE_CRITICAL
+        else: # NAGIOS_INNER_THRESHOLD
+            if crit["start"] == "~":
+                if value <  crit["end"]:
+                    RETURN_VAL=STATE_CRITICAL
+            elif value > crit["start"] and value < crit["end"]:
+                    RETURN_VAL=STATE_CRITICAL
 
-# Append perf data if data is numeric
-append_perf=True
-try:
-    float(value)
-except:
-    append_perf=False
 
-perf_stat = value+uom
+
+# Append Unit of measurement
+perf_stat = str(value)+uom
         
 ###
 ## Print stat information and the return code for Nagios
@@ -306,7 +296,7 @@ perf_stat = value+uom
 
 if stat_line != "":
     if append_perf:
-        print '%s|%s=%s;%d;%d' % (stat_line,arg_stat,perf_stat,arg_warning,arg_critical) 
+        print '%s|%s=%s;%s;%s' % (stat_line,arg_stat,perf_stat,arg_warning,arg_critical) 
     else:
         print '%s' % (stat_line)
     sys.exit(RETURN_VAL)

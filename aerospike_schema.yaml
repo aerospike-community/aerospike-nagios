@@ -46,18 +46,6 @@
 #     - percent
 #     - bytes
 #
-# Some metrics may define a conversion, which is formatted as:
-#
-#     - metric:[input]=[output][...]
-# 
-# For example, we want to record "dc_state" as a boolean, but it's actual value
-# is a string, so we can map the string to boolean:
-#
-#     - dc_state:CLUSTER_UP=true,*=false
-#
-# This states that if the value is "CLUSTER_UP", then map it to "1", 
-# otherwise map it to "0".
-#
 # ------------------------------------------------------------------------------
 
 # ==============================================================================
@@ -427,7 +415,7 @@ datacenter:
     - dc_open_conn
     - dc_recs_inflight
     - dc_size
-    - dc_state:CLUSTER_DOWN=0;CLUSTER_UP=1;CLUSTER_WINDOW_SHIP=2;CLUSTER_INACTIVE=3
+    - dc_state
   
   bytes:
     - dc_esmt_bytes_shipped

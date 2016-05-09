@@ -24,6 +24,7 @@ The goal is to reduce the complexity to 2 simple steps.
 - Host based monitoring instead of cluster based monitoring
 
 ### Requirements
+
 1. Aerospike python client. See [this page](http://www.aerospike.com/docs/client/python/install/)
 
 ### Getting Started
@@ -74,16 +75,8 @@ To monitor a specfic statistic in xdr:
 
 ### Alert Levels
 
-To not use warning and critical levels, set them both to 0
+Warning and Critical thresholds are specified according to [Nagios' format](https://nagios-plugins.org/doc/guidelines.html#THRESHOLDFORMAT)
 
-`free-pct` and `available_pct` metrics are lower thresholds. The conditions are tripped when the value
-is lower than the thresholds specified.
+To not use warning and/or critical levels, set them to 0.
 
-> ie: critical should be *lower* than warning, and metric values should be **above** both.
-
-`cluster_size` thresholds are lower thresholds as well. If a cluster's size falls belows the set threshold,
-a alert state will be triggered.
-
-For everything else, the thresholds are upper thresholds. 
-
-> ie: critical should be *higher* than warning, and metric values should be **below** both.
+Example usage can be found in the examples/aerospike.cfg file. 
