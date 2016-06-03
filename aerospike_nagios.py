@@ -251,9 +251,9 @@ else:
     # Append perfdata iff metric value is numeric
     try:
         value = float(value)
-	append_perf=True
+        append_perf=True
     except:
-	    pass
+        pass
     # Warning threshold first
     if arg_warning != "0":
         warn = parseRange(arg_warning)
