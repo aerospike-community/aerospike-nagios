@@ -251,7 +251,7 @@ else:
     # Append perfdata iff metric value is numeric
     try:
         value = float(value)
-		append_perf=True
+	append_perf=True
     except:
 	    pass
     # Warning threshold first
