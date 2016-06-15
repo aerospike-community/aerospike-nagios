@@ -62,6 +62,7 @@ def usage():
     print " -s \"statistic\" (Eg: \"free-pct-memory\")"
     print " -n \"namespace\" (Eg: \"namespace/test\")"
     print " -x \"xdr\" (Eg: \"datacenter1\")"
+    print " -l \"latency\" (Eg: \"writes_master\")"
     print " -c \"critical level\" (Eg: \"60\")"
     print " -w \"warning level\" (Eg: \"70\")"
     return
@@ -70,7 +71,7 @@ def usage():
 ###
 ## Process passed in arguments
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "h:p:s:n:x:c:w:U:P", ["host=","port=","statistics=","namespace=","xdr=","critical=","warning=","User=","Password="])
+    opts, args = getopt.getopt(sys.argv[1:], "h:p:s:n:x:l:c:w:U:P", ["host=","port=","statistics=","namespace=","xdr=","latency=","critical=","warning=","User=","Password="])
 
     if not opts:
         print "No options supplied."
@@ -95,6 +96,8 @@ for o, a in opts:
         arg_value = "namespace/" + a
     if (o == "-x" or o == "--xdr"):
         arg_value = "dc/" + a
+    if (o == "-l" or o == "--latency"):
+        arg_value = "latency:hist=" + a
     if (o == "-U" or o == "--User"):
         user = a
     if (o == "-p" or o == "--Password"):
@@ -196,11 +199,23 @@ if r == None:
 #    this_stat_line=""
 
 value = None
-for s in r.split(";"):
-    if arg_stat + "=" in s:
-        value = s.split(arg_stat + "=")[-1]
-    if value != None:
-        stat_line = 'Aerospike Stats - ' + arg_stat + "=" + value
+latency_time = ["1ms", "8ms", "64ms"]
+if arg_stat in latency_time:
+    s = r.split(";")
+    n = 1
+    for t in latency_time:
+        n += 1
+        if t == arg_stat:
+            value = s[1].split(",")[n]
+            arg_stat = ">" + arg_stat
+        if value != None:
+            stat_line = 'Aerospike Stats - ' + arg_value + ": " + arg_stat + "=" + value
+else:
+    for s in r.split(";"):
+        if arg_stat + "=" in s:
+            value = s.split(arg_stat + "=")[-1]
+        if value != None:
+            stat_line = 'Aerospike Stats - ' + arg_stat + "=" + value
 
 #
 # Load schema file
