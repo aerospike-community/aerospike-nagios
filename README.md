@@ -15,9 +15,10 @@ The goal is to reduce the complexity to 2 simple steps.
 #Features
 
 - Can monitor any stat returned by
-  - `$ asinfo -v 'statistics' [-h <HOST>]`
+  - `$ asinfo -v 'statistics' [-h host]`
   - `$ asinfo -v 'namespace/<NAMESPACE NAME>' [-h host]`
   - `$ asinfo -v 'dc/<DATACENTER>' [-h host]`
+  - `$ asinfo -v 'latency:hist=<LATCENCY STAT>' [-h host]`
 
 ###Known Issues
 
@@ -37,7 +38,7 @@ The goal is to reduce the complexity to 2 simple steps.
 
 1. Copy examples/aerospike.cfg into your nagios conf.d directory
 
-   > /etc/nagios/conf.d if installed from repo
+   > /etc/nagios/conf.d if installed from repo  
    > /usr/local/nagios/etc/objects if installed from source
 
 1. Edit aerospike.cfg to add your aerospike hosts into the hostgroup
@@ -61,17 +62,21 @@ you are not required to interact with it.
      -x xdr datacenter (Enterprise 3.8+)
      -s "statistic" (Eg: "free-pct-memory")
      -n "namespace" (Eg: "namespace/test")
+     -l "latency" (Options: reads, writes, writes_reply, proxy) 
      -c "critical level" (Eg: "60")
      -w "warning level" (Eg: "70")
 
-To monitor a specific general statistic:
+To monitor a specific general statistic:  
 `aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -w WARN_LEVEL -c CRIT_LEVEL`
 
-To monitor a specific statistic in a namepsace:
+To monitor a specific statistic in a namepsace:  
 `aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -n YOUR_NAMESPACE -w WARN_LEVEL -c CRIT_LEVEL`
 
-To monitor a specfic statistic in xdr:
+To monitor a specfic statistic in xdr:  
 `aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -x DATACENTER -w WARN_LEVEL -c CRIT_LEVEL`
+
+To monitor latency statistics:  
+`aerospike_nagios.py -h YOUR_ASD_HOST -s <1ms|8ms|64ms>  -l <reads|writes|writes_reply|proxy> -w WARN_LEVEL -c CRIT_LEVEL`
 
 ### Alert Levels
 

@@ -22,7 +22,7 @@
 
 __author__ = "Aerospike"
 __copyright__ = "Copyright 2016 Aerospike"
-__version__ = "1.0.0"
+__version__ = "1.3.0"
 
 import sys
 import yaml
@@ -62,7 +62,7 @@ def usage():
     print " -s \"statistic\" (Eg: \"free-pct-memory\")"
     print " -n \"namespace\" (Eg: \"namespace/test\")"
     print " -x \"xdr\" (Eg: \"datacenter1\")"
-    print " -l \"latency\" (Eg: \"writes_master\")"
+    print " -l \"latency\" (Options: reads, writes, writes_reply, proxy)"
     print " -c \"critical level\" (Eg: \"60\")"
     print " -w \"warning level\" (Eg: \"70\")"
     return
@@ -135,7 +135,6 @@ NAGIOS_INNER_THRESHOLD=1        # alert if inside range of { start ... end }    
 
 def parseRange(myRange):
     # check syntax
-    print myRange
     match = re.match("^@?(-?\d+|~)$|^@?(-?\d*|~):-?\d+$",myRange)
     if not match:
         print "Threshold format is incorrect. The format is: [@]start:end. Entered value: %s"%(myRange)
