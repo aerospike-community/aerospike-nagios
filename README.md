@@ -62,7 +62,7 @@ you are not required to interact with it.
      -x xdr datacenter (Enterprise 3.8+)
      -s "statistic" (Eg: "free-pct-memory")
      -n "namespace" (Eg: "namespace/test")
-     -l "latency" (Options: reads, writes, writes_reply, proxy) 
+     -l "latency" (Options: See output of asinfo -v "latency:hist" -l)
      -c "critical level" (Eg: "60")
      -w "warning level" (Eg: "70")
 
@@ -75,8 +75,13 @@ To monitor a specific statistic in a namepsace:
 To monitor a specfic statistic in xdr:  
 `aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -x DATACENTER -w WARN_LEVEL -c CRIT_LEVEL`
 
-To monitor latency statistics:  
+To monitor latency statistics (pre-1.9):  
 `aerospike_nagios.py -h YOUR_ASD_HOST -s <1ms|8ms|64ms>  -l <reads|writes|writes_reply|proxy> -w WARN_LEVEL -c CRIT_LEVEL`
+
+To monitor latency statistics (ASD 1.9+):
+`aerospike_nagios.py -h YOUR_ASD_HOST -s <1ms|8ms|64ms>  -l {NAMESPACE}-<read|write|proxy|udf> -w WARN_LEVEL -c CRIT_LEVEL`
+eg:
+`aerospike_nagios.py -h localhost -s 1ms  -l {test}-read -w 8 -c 10`
 
 ### Alert Levels
 
