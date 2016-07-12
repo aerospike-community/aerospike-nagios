@@ -229,7 +229,7 @@ service:
     - err_replica_non_null_node
     - err_replica_null_node
     - err_rw_cant_put_unique
-    - err_rw_pending_limit     # moved to NS client_trans_fail_key_busy
+    - err_rw_pending_limit     # moved to NS fail_key_busy
     - err_rw_request_not_found
     - err_storage_queue_full
     - err_sync_copy_null_master
@@ -239,8 +239,8 @@ service:
     - err_write_fail_bin_exists
     - err_write_fail_bin_name
     - err_write_fail_bin_not_found
-    - err_write_fail_forbidden      # moved to NS client_trans_fail_xdr_forbidden
-    - err_write_fail_generation     # moved to NS client_write_fail_generation
+    - err_write_fail_forbidden      # moved to NS fail_xdr_forbidden
+    - err_write_fail_generation     # moved to NS fail_generation
     - err_write_fail_generation_xdr
     - err_write_fail_incompatible_type
     - err_write_fail_key_exists
@@ -251,7 +251,7 @@ service:
     - err_write_fail_prole_delete
     - err_write_fail_prole_generation
     - err_write_fail_prole_unknown
-    - err_write_fail_record_too_big    # moved to NS client_write_fail_record_too_big
+    - err_write_fail_record_too_big    # moved to NS fail_record_too_big
     - err_write_fail_unknown
     - fabric_msgs_rcvd
     - fabric_msgs_sent
@@ -381,17 +381,17 @@ service:
     - udf_bg_scans_failed        # moved to NS udf_bg_scan_success
     - udf_delete_err_others
     - udf_delete_reqs
-    - udf_delete_success    # moved to NS client_lua_delete_success
-    - udf_lua_errs        # moved to NS client_lua_error, udf_sub_udf_error
+    - udf_delete_success    # moved to NS client_lang_delete_success
+    - udf_lua_errs        # moved to NS client_lang_error, udf_sub_udf_error
     - udf_query_rec_reqs
     - udf_read_errs_other
     - udf_read_reqs
-    - udf_read_success        # moved to NS client_lua_read_success
+    - udf_read_success        # moved to NS client_lang_read_success
     - udf_replica_writes
     - udf_scan_rec_reqs
     - udf_write_err_others
     - udf_write_reqs
-    - udf_write_success    # moved to NS client_lua_write_success
+    - udf_write_success    # moved to NS client_lang_write_success
     - write_master
     - write_prole
     - xdr_deletes_canceled
@@ -516,14 +516,16 @@ namespace:
     - batch_sub_read_not_found
     - batch_sub_read_success
     - batch_sub_read_timeout
+    - batch_sub_tsvc_error
+    - batch_sub_tsvc_timeout
     - client_delete_error
     - client_delete_not_found
     - client_delete_success
     - client_delete_timeout
-    - client_lua_delete_success
-    - client_lua_error
-    - client_lua_read_success
-    - client_lua_write_success
+    - client_lang_delete_success
+    - client_lang_error
+    - client_lang_read_success
+    - client_lang_write_success
     - client_proxy_complete
     - client_proxy_error
     - client_proxy_timeout
@@ -531,14 +533,12 @@ namespace:
     - client_read_not_found
     - client_read_success
     - client_read_timeout
-    - client_trans_fail_key_busy
-    - client_trans_fail_xdr_forbidden
+    - client_tsvc_error
+    - client_tsvc_timeout
     - client_udf_complete
     - client_udf_error
     - client_udf_timeout
     - client_write_error
-    - client_write_fail_generation
-    - client_write_fail_record_too_big
     - client_write_success
     - client_write_timeout
     - demarshal_error
@@ -547,6 +547,10 @@ namespace:
     - evict_ttl
     - expired-objects
     - expired_objects
+    - fail_generation
+    - fail_key_busy
+    - fail_record_too_big
+    - fail_xdr_forbidden
     - geo_region_query_cells
     - geo_region_query_falsepos
     - geo_region_query_points
@@ -600,21 +604,19 @@ namespace:
     - set-deleted-objects
     - set_deleted_objects
     - set-evicted-objects
-    - tsvc_batch_sub_error
-    - tsvc_batch_sub_timeout
-    - tsvc_client_error
-    - tsvc_client_timeout
-    - tsvc_udf_sub_error
-    - tsvc_udf_sub_timeout
-    - udf_sub_lua_delete_success
-    - udf_sub_lua_error
-    - udf_sub_lua_read_success
-    - udf_sub_lua_write_success
+    - udf_sub_lang_delete_success
+    - udf_sub_lang_error
+    - udf_sub_lang_read_success
+    - udf_sub_lang_write_success
     - udf_sub_udf_complete
     - udf_sub_udf_error
     - udf_sub_udf_timeout
+    - udf_sub_tsvc_error
+    - udf_sub_tsvc_timeout
     - xdr_read_success
+    - xdr_write_error
     - xdr_write_success
+    - xdr_write_timeout
 
 # ==============================================================================
 # Datacenter (XDR) specific metrics recorded per datacenter
