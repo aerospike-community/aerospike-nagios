@@ -22,7 +22,7 @@
 
 __author__ = "Aerospike"
 __copyright__ = "Copyright 2016 Aerospike"
-__version__ = "1.3.0"
+__version__ = "1.3.1"
 
 import sys
 import yaml
@@ -210,8 +210,8 @@ if arg_stat in latency_time:
         if value != None:
             stat_line = 'Aerospike Stats - ' + arg_value + ": " + arg_stat + "=" + value
 else:
-    for s in r.split(";"):
-        if arg_stat + "=" in s:
+    for s in r.split()[-1].split(";"):	# remove leading category, then split k=v tuples
+        if s.startswith(arg_stat + "="):
             value = s.split(arg_stat + "=")[-1]
         if value != None:
             stat_line = 'Aerospike Stats - ' + arg_stat + "=" + value
