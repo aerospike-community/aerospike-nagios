@@ -60,7 +60,7 @@ you are not required to interact with it.
      -U user (Enterprise only)
      -P password (Enterprise only)
      -x xdr datacenter (Enterprise 3.8+)
-     -s "statistic" (Eg: "free-pct-memory")
+     -s "statistic" (Eg: "cluster_size")
      -n "namespace" (Eg: "namespace/test")
      -l "latency" (Options: See output of asinfo -v "latency:hist" -l)
      -c "critical level" (Eg: "60")
