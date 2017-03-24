@@ -131,10 +131,10 @@ eg:
 `aerospike_nagios.py -h localhost -s 1ms  -l {test}-read -w 8 -c 10`
 
 To utilize encrypt only:
-`aerospike_nagios.py -h YOUR_ASD_HOST -p YOUR_SECURED_PORT -s STAT_NAME --tls_enabled --tls_encrypt_only -w WARN_LEVEL -c CRIT_LEVEL`
+`aerospike_nagios.py -h YOUR_ASD_HOST -p YOUR_SECURED_PORT -s STAT_NAME --tls_enable --tls_encrypt_only -w WARN_LEVEL -c CRIT_LEVEL`
 
 To utilize SSL/TLS standard auth:
-`aerospike_nagios.py -h YOUR_ASD_HOST -p YOUR_SECURED_PORT -s STAT_NAME --tls_enabled --tls_cafile YOUR_CA_PEM --tls_name YOUR_ASD_CERT_NAME -w WARN_LEVEL -c CRIT_LEVEL`
+`aerospike_nagios.py -h YOUR_ASD_HOST -p YOUR_SECURED_PORT -s STAT_NAME --tls_enable --tls_cafile YOUR_CA_PEM --tls_name YOUR_ASD_CERT_NAME -w WARN_LEVEL -c CRIT_LEVEL`
 
 ### Alert Levels
 
