@@ -54,7 +54,8 @@ you are not required to interact with it.
 
 ###  Usage
 ```bash
-usage: aerospike_nagios.py [-u] [-U USER] [-P [PASSWORD]] [-v]
+usage: aerospike_nagios.py [-u] [-U USER] [-P [PASSWORD]]
+                           [--credentials-file CREDENTIALS] [-v]
                            [-n NAMESPACE | -l LATENCY | -x DC] -s STAT
                            [-p PORT] [-h HOST] -c CRIT -w WARN [--tls_enable]
                            [--tls_encrypt_only] [--tls_keyfile TLS_KEYFILE]
@@ -70,6 +71,9 @@ optional arguments:
   -U USER, --user USER  user name
   -P [PASSWORD], --password [PASSWORD]
                         password
+  --credentials-file CREDENTIALS
+                        Path to the credentials file. Use this in place of
+                        --user and --password.
   -v, --verbose         Enable verbose logging
   -n NAMESPACE, --namespace NAMESPACE
                         Namespace name. eg: bar
@@ -143,3 +147,10 @@ Warning and Critical thresholds are specified according to [Nagios' format](http
 To not use warning and/or critical levels, set them to 0.
 
 Example usage can be found in the examples/aerospike.cfg file. 
+
+### Authentication
+
+You can specify User and Password for authentication via the -U/--user and -P/--password parameters.
+The Password is also an interactive prompt if you leave it empty.
+                        
+If this is not preferable, you can also specify a credentials file with -c/--credentials-file. It is a simple 2 line file, with the username and password on each line, in that order. With this method, the credentials file can be secured via other means (eg: chmod 600) and prevent snooping.

@@ -255,6 +255,9 @@ parser.add_argument("-P"
                     , nargs="?"
                     , const="prompt"
                     , help="password")
+parser.add_argument("--credentials-file"
+                    , dest="credentials"
+                    , help="Path to the credentials file. Use this in place of --user and --password.")
 parser.add_argument("-v"
                     , "--verbose"
                     , action="store_true"
@@ -357,6 +360,14 @@ if args.user != None:
         args.password = getpass.getpass("Enter Password:")
     password = args.password
 
+if args.credentials:
+    try:
+        cred_file = open(args.credentials,'r')
+        user = cred_file.readline().strip()
+        password = cred_file.readline().strip()
+    except IOError:
+        print "Unable to read credentials file: %s"%args.credentials
+
 # Takes a range in the format of [@]start:end
 # Negative values also ok
 # See Nagios guidelines: https://nagios-plugins.org/doc/guidelines.html#THRESHOLDFORMAT
@@ -402,7 +413,6 @@ except Exception as e:
     print("Failed to connect to the Aerospike cluster at %s:%s"%(args.host,args.port))
     print e
     sys.exit(STATE_UNKNOWN)
-
 if user and password:
     status = client.auth(user,password)
 

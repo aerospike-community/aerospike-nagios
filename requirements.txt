@@ -1,4 +1,5 @@
 argparse
+pyyaml
 
 # if using auth
 #bcrypt
