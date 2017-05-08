@@ -490,7 +490,7 @@ append_perf=False
 if "dc_state" in args.stat:
     if value != 'CLUSTER_UP':
         RETURN_VAL=STATE_CRITICAL
-elif args.stat in ["stop-writes","system_swapping"]:
+elif args.stat in ["stop_writes","system_swapping","hwm_breached"]:
     if value == 'true':
         RETURN_VAL=STATE_CRITICAL
 elif args.stat in ["cluster_integrity"]:
