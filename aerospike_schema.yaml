@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Copyright 2012-2016 Aerospike, Inc.
+# Copyright 2012-2017 Aerospike, Inc.
 #
 # Portions may be licensed to Aerospike, Inc. under one or more contributor
 # license agreements.
@@ -110,7 +110,7 @@ latency:
 # Service metrics provide details about the state of the service
 # ------------------------------------------------------------------------------
 
-# Inline comments indicate moved/renamed metrics with ASD 1.9+
+# Inline comments indicate moved/renamed metrics with ASD 3.9+
 service:
 
   gauge:
@@ -121,10 +121,18 @@ service:
     - batch_queue
     - batch_tree_count
     - client_connections
-    - cluster_size
     - delete_queue
     - fabric_connections
+    - fabric_bulk_send_rate
+    - fabric_bulk_recv_rate
+    - fabric_ctrl_send_rate
+    - fabric_ctrl_recv_rate
+    - fabric_meta_send_rate
+    - fabric_meta_recv_rate
+    - fabric_rw_send_rate
+    - fabric_rw_recv_rate
     - failednode_sessions_pending    # renamed xdr_actived_failed_node_sessions
+    - heap_site_count
     - heartbeat_connections
     - info_queue
     - latency_avg_dlogread
@@ -150,12 +158,14 @@ service:
     - queue                # renamed tsvc_queue
     - record_locks
     - record_refs
-    - remaining_migrations        # renamed to migrate_paritions_remaining
+    - remaining_migrations        # renamed to migrate_partitions_remaining
     - stat_evicted_objects_time
     - sub-records     # renamed to sub_objects
     - sub_objects
+    - tombstones
     - total_recs_dlog
     - transaction_queue_used    # renamed xdr_read_txnq_used
+    - tree_gc_queue
     - tsvc_queue
     - used_recs_dlog    # renamed dlog_used_objects
     - tree_count
@@ -166,12 +176,15 @@ service:
     - xdr_active_failed_node_sessions
     - xdr_active_link_down_sessions
     - xdr_ship_latency_avg
+    - xdr_read_latency_avg
     - xdr_read_txnq_used
     - xdr_throughput
     - xdr_timelag
+    - xdr_global_lastshiptime
 
   boolean:
     - cluster_integrity
+    - cluster_is_member
     - migrate_allowed
     - system_swapping
 
@@ -180,6 +193,7 @@ service:
     - free-pct-disk
     - free-pct-memory
     - free_dlog_pct        # renamed dlog_free_pct
+    - heap_efficiency_pct
     - read_threads_avg_processing_time_pct        # renamed xdr_read_active_avg_pct
     - read_threads_avg_watiing_time_pct            # renamed xdr_read_idle_avg_pct
     - system_free_mem_pct
@@ -192,6 +206,9 @@ service:
 
   bytes:
     - data-used-bytes-memory
+    - heap_allocated_kbytes
+    - heap_active_kbytes
+    - heap_mapped_kbytes
     - index-used-bytes-memory
     - sindex-used-bytes-memory        # moved to NS memory_used_sindex_bytes
     - total-bytes-disk
@@ -202,7 +219,7 @@ service:
   operations:
     - basic_scans_failed    # moved to NS scan_basic_error
     - basic_scans_succeeded    # moved to NS scan_basic_complete
-    - batch_errors
+    - batch_error
     - batch_index_initiate
     - batch_index_complete
     - batch_index_timeout
@@ -214,7 +231,7 @@ service:
     - batch_initiate
     - batch_timeout
     - dlog_logged
-    - dlog_dlog_overwritten_error
+    - dlog_overwritten_error
     - dlog_processed_link_down
     - dlog_processed_main
     - dlog_processed_replica
@@ -309,7 +326,7 @@ service:
     - rw_err_dup_cluster_key
     - rw_err_dup_internal
     - rw_err_dup_send
-    - rw_err_write_cluster_key
+    - rw_err_write_luster_key
     - rw_err_write_internal
     - rw_err_write_send
     - scans_active
@@ -350,7 +367,7 @@ service:
     - stat_recs_linkdown_processed    # renamed dlog_processed_link_down
     - stat_recs_logged        # renamed dlog_logged
     - stat_recs_logged_master
-    - stat_recs_outstandinga    # renamed xdr_outstanding_objects
+    - stat_recs_outstanding    # renamed xdr_ship_outstanding_objects
     - stat_recs_relogged        # renamed dlog_relogged
     - stat_recs_relogged_incoming    # renamed xdr_relogged_incoming
     - stat_recs_relogged_outgoing    # renamed xdr_relogged_outgoing
@@ -398,10 +415,8 @@ service:
     - xdr_deletes_shipped    # renamed xdr_ship_delete_success
     - xdr_hotkey_fetch
     - xdr_hotkey_skip
-    - xdr_outstanding_objects
     - xdr_queue_overflow_error
     - xdr_read_error
-    - xdr_read_latency_avg
     - xdr_read_not_found
     - xdr_read_reqq_used
     - xdr_read_respq_used
@@ -413,6 +428,7 @@ service:
     - xdr_ship_destination_error
     - xdr_ship_inflight_objects
     - xdr_ship_fullrecord
+    - xdr_ship_outstanding_objects
     - xdr_ship_source_error
     - xdr_ship_success
     - xdr_uninitialized_destination_error
@@ -423,7 +439,7 @@ service:
 # Namespace specific metrics recorded per namespace
 # ------------------------------------------------------------------------------
 
-# inline comments indicate moved/renamed metrics starting with ASD 1.9+
+# inline comments indicate moved/renamed metrics starting with ASD 3.9+
 namespace:    
   
   gauge:    
@@ -493,6 +509,7 @@ namespace:
     - used-bytes-memory    # renamed memory_used_bytes
 
   boolean:
+    - hwm-breached
     - hwm_breached
     - stop_writes
 
@@ -563,7 +580,7 @@ namespace:
     - ldt_updates
     - ldt_writes
     - ldt_write_success
-    - migrate-recrod-receives
+    - migrate-record-receives
     - migrate_record_receives
     - migrate-record-retransmits
     - migrate_record_retransmits
@@ -622,7 +639,7 @@ namespace:
 # Datacenter (XDR) specific metrics recorded per datacenter
 # ------------------------------------------------------------------------------
 
-# inline comments indicate moved/renamed metrics starting with ASD 1.9+
+# inline comments indicate moved/renamed metrics starting with ASD 3.9+
 datacenter:
   
   gauge:
