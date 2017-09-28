@@ -326,7 +326,7 @@ service:
     - rw_err_dup_cluster_key
     - rw_err_dup_internal
     - rw_err_dup_send
-    - rw_err_write_luster_key
+    - rw_err_write_cluster_key
     - rw_err_write_internal
     - rw_err_write_send
     - scans_active
