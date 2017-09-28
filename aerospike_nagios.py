@@ -22,7 +22,7 @@
 
 __author__ = "Aerospike"
 __copyright__ = "Copyright 2017 Aerospike"
-__version__ = "1.4.0"
+__version__ = "1.4.1"
 
 import sys
 import yaml
@@ -500,6 +500,8 @@ else:
     # Append perfdata iff metric value is numeric
     try:
         value = float(value)
+        print value
+        print type(value)
         append_perf=True
     except:
         pass
@@ -521,18 +523,22 @@ else:
     # Critical threshold override warning threshold
     if args.crit != "0":
         crit = parseRange(args.crit)
+        print(crit)
         if crit["mode"] == NAGIOS_OUTER_THRESHOLD:
             if crit["start"] == "~":
                 if value >=  crit["end"]:
                     RETURN_VAL=STATE_CRITICAL
             elif value < crit["start"] or value >= crit["end"]:
                     RETURN_VAL=STATE_CRITICAL
+                    print "3fail"
         else: # NAGIOS_INNER_THRESHOLD
             if crit["start"] == "~":
                 if value <  crit["end"]:
                     RETURN_VAL=STATE_CRITICAL
+                    print "2 fail"
             elif value > crit["start"] and value < crit["end"]:
                     RETURN_VAL=STATE_CRITICAL
+                    print "last fail"
 
 
 
