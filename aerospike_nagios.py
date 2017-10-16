@@ -490,7 +490,7 @@ append_perf=False
 if "dc_state" in args.stat:
     if value != 'CLUSTER_UP':
         RETURN_VAL=STATE_CRITICAL
-elif args.stat in ["stop_writes","system_swapping","hwm_breached"]:
+elif args.stat in ["stop_writes","system_swapping","hwm_breached","stop-writes","hwm-breached"]:
     if value == 'true':
         RETURN_VAL=STATE_CRITICAL
 elif args.stat in ["cluster_integrity"]:
@@ -500,8 +500,6 @@ else:
     # Append perfdata iff metric value is numeric
     try:
         value = float(value)
-        print value
-        print type(value)
         append_perf=True
     except:
         pass
@@ -523,22 +521,18 @@ else:
     # Critical threshold override warning threshold
     if args.crit != "0":
         crit = parseRange(args.crit)
-        print(crit)
         if crit["mode"] == NAGIOS_OUTER_THRESHOLD:
             if crit["start"] == "~":
                 if value >=  crit["end"]:
                     RETURN_VAL=STATE_CRITICAL
             elif value < crit["start"] or value >= crit["end"]:
                     RETURN_VAL=STATE_CRITICAL
-                    print "3fail"
         else: # NAGIOS_INNER_THRESHOLD
             if crit["start"] == "~":
                 if value <  crit["end"]:
                     RETURN_VAL=STATE_CRITICAL
-                    print "2 fail"
             elif value > crit["start"] and value < crit["end"]:
                     RETURN_VAL=STATE_CRITICAL
-                    print "last fail"
 
 
 
