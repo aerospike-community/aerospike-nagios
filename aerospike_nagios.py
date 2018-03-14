@@ -123,6 +123,8 @@ class Client(object):
 
                 import bcrypt
 
+                if password == None:
+                        password = ''
                 credential = bcrypt.hashpw(password, SALT)
 
                 if timeout is None:
@@ -413,7 +415,7 @@ except Exception as e:
     print("Failed to connect to the Aerospike cluster at %s:%s"%(args.host,args.port))
     print e
     sys.exit(STATE_UNKNOWN)
-if user and password:
+if user:
     status = client.auth(user,password)
 
 r = client.info(arg_value).strip()
