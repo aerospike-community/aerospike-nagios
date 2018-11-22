@@ -1,10 +1,10 @@
-#Note:
+# Note:
 
 The previous implementation of the nagios plugin has been moved to the
 `legacy` branch.
 
 
-#Introduction
+# Introduction
 
 aerospike\_nagios.py simplifies nagios configurations for Aerospike clusters.
 The goal is to reduce the complexity to 2 simple steps.
@@ -12,7 +12,7 @@ The goal is to reduce the complexity to 2 simple steps.
 1. Copy aerospike\_nagios.py and dependencies to your Nagios server
 2. Add aerospike configs into Nagios
 
-#Features
+# Features
 
 - Can monitor any stat returned by
   - `$ asinfo -v 'statistics' [-h host]`
