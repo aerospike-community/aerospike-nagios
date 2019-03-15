@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Copyright 2012-2017 Aerospike, Inc.
+# Copyright 2012-2019 Aerospike, Inc.
 #
 # Portions may be licensed to Aerospike, Inc. under one or more contributor
 # license agreements.
@@ -16,7 +16,7 @@
 # ------------------------------------------------------------------------------
 
 # ==============================================================================
-# Schema for Aerospike Plugin for collectd
+# Schema for Aerospike Plugin for nagios
 # ------------------------------------------------------------------------------
 # This document specifies the metrics that will be sent to collectd. The 
 # document is formatted using YAML, so you can use YAML commenting to disable
@@ -118,6 +118,7 @@ service:
     - aggr_scans_succeded    # Moved to NS scan_aggr_complete
     - cluster_clock_skew
     - cluster_clock_skew_stop_writes_sec
+    - cluster_key
     - cluster_size
     - uptime
     - batch_queue
@@ -242,6 +243,8 @@ service:
     - dlog_used_objects
     - early_tsvc_batch_sub_error
     - early_tsvc_client_error
+    - early_tsvc_from_proxy_batch_sub_error
+    - early_tsvc_from_proxy_error
     - early_tsvc_udf_sub_error
     - err_duplicate_proxy_request
     - err_out_of_space    
@@ -452,11 +455,11 @@ namespace:
     - appeals_tx_remaining
     - available-bin-names
     - available_bin_names
-    - clock_skew_stop_writes
     - current-time
     - current_time
     - dead_partitions
     - effective_replication_factor
+    - evict_void_time
     - ldc-gc-rate
     - master-objects
     - master_objects
@@ -495,6 +498,7 @@ namespace:
     - prole_objects
     - prole-sub-objects
     - prole_sub_objects
+    - smd_evict_void_time
     - unavailable_partitions
     # Configs
     - repl-factor
@@ -519,6 +523,7 @@ namespace:
     - used-bytes-memory    # renamed memory_used_bytes
 
   boolean:
+    - clock_skew_stop_writes
     - hwm-breached
     - hwm_breached
     - stop_writes
@@ -578,6 +583,32 @@ namespace:
     - fail_key_busy
     - fail_record_too_big
     - fail_xdr_forbidden
+    - from_proxy_batch_sub_read_error
+    - from_proxy_batch_sub_read_not_found
+    - from_proxy_batch_sub_read_success
+    - from_proxy_batch_sub_read_timeout
+    - from_proxy_batch_sub_tsvc_error
+    - from_proxy_batch_sub_tsvc_timeout
+    - from_proxy_delete_error
+    - from_proxy_delete_not_found
+    - from_proxy_delete_success
+    - from_proxy_delete_timeout
+    - from_proxy_lang_delete_success
+    - from_proxy_lang_error
+    - from_proxy_lang_read_success
+    - from_proxy_lang_write_success
+    - from_proxy_read_error
+    - from_proxy_read_not_found
+    - from_proxy_read_success
+    - from_proxy_read_timeout
+    - from_proxy_tsvc_error
+    - from_proxy_tsvc_timeout
+    - from_proxy_udf_complete
+    - from_proxy_udf_error
+    - from_proxy_udf_timeout
+    - from_proxy_write_error
+    - from_proxy_write_success
+    - from_proxy_write_timeout
     - geo_region_query_cells
     - geo_region_query_falsepos
     - geo_region_query_points
@@ -623,6 +654,14 @@ namespace:
     - re_repl_error
     - re_repl_success
     - re_repl_timeout
+    - retransmit_all_read_dup_res
+    - retransmit_all_delete_dup_res
+    - retransmit_all_delete_repl_write
+    - retransmit_all_sub_dup_res
+    - retransmit_all_udf_dup_res
+    - retransmit_all_udf_repl_write
+    - retransmit_all_write_dup_res
+    - retransmit_all_write_repl_write
     - scan_aggr_complete
     - scan_aggr_error
     - scan_basic_abort
@@ -643,6 +682,20 @@ namespace:
     - udf_sub_udf_timeout
     - udf_sub_tsvc_error
     - udf_sub_tsvc_timeout
+    - xdr_client_delete_error
+    - xdr_client_delete_not_found
+    - xdr_client_delete_success
+    - xdr_client_delete_timeout
+    - xdr_client_write_error
+    - xdr_client_write_success
+    - xdr_client_write_timeout
+    - xdr_from_proxy_delete_error
+    - xdr_from_proxy_delete_not_found
+    - xdr_from_proxy_delete_success
+    - xdr_from_proxy_delete_timeout
+    - xdr_from_proxy_write_error
+    - xdr_from_proxy_write_success
+    - xdr_from_proxy_write_timeout
     - xdr_read_success
     - xdr_write_error
     - xdr_write_success
