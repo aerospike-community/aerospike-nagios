@@ -444,7 +444,7 @@ parser.add_argument("--tls_ciphers"
                     , help="Ciphers to include. See https://www.openssl.org/docs/man1.0.1/apps/ciphers.html for cipher list format")
 parser.add_argument("--tls_protocols"
                     , dest="tls_protocols"
-                    , help="The TLS protocol to use. Available choices: SSLv2, SSLv3, TLSv1, TLSv1.1, TLSv1.2, all. An optional + or - can be appended before the protocol to indicate specific inclusion or exclusion.")
+                    , help="The TLS protocol to use. Available choices: TLSv1, TLSv1.1, TLSv1.2, all. An optional + or - can be appended before the protocol to indicate specific inclusion or exclusion.")
 parser.add_argument("--tls_cert_blacklist"
                     , dest="tls_cert_blacklist"
                     , help="Blacklist including serial number of certs to revoke")
@@ -551,18 +551,17 @@ except Exception as e:
 
 client.close()
 
-if args.stat not in r:
-    print "%s is not a known statistic." %args.stat
-    sys.exit(STATE_UNKNOWN)
-
-if r == -1:
-    print "request to ",args.host,":",args.port," returned error."
-    sys.exit(STATE_CRITICAL)
-    
 if r == None:
     print "request to ",args.host,":",args.port," returned no data."
     sys.exit(STATE_CRITICAL)
 
+if r == -1:
+    print "request to ",args.host,":",args.port," returned error."
+    sys.exit(STATE_CRITICAL)
+
+if args.stat not in r:
+    print "%s is not a known statistic." %args.stat
+    sys.exit(STATE_UNKNOWN)
 
 value = None
 latency_time = ["1ms", "8ms", "64ms"]
