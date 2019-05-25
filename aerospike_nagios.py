@@ -47,198 +47,303 @@ schema_path = '/opt/aerospike/bin/aerospike_schema.yaml'
 arg_value = "statistics"
 stat_line = None
 
+DEFAULT_TIMEOUT = 5
+
 # =============================================================================
 #
 # Client
 #
 # -----------------------------------------------------------------------------
 
-STRUCT_PROTO = struct.Struct('! Q')
-STRUCT_AUTH = struct.Struct('! xxBB12x')
-STRUCT_FIELD = struct.Struct('! IB')
+_OK = 0
+_INVALID_COMMAND = 54
 
-MSG_VERSION = 0
-MSG_TYPE = 2
-AUTHENTICATE = 0
-USER = 0
-CREDENTIAL = 3
-SALT = "$2a$10$7EqJtq98hPqEX7fNZaFWoO"
+_ADMIN_MSG_VERSION = 0
+_ADMIN_MSG_TYPE = 2
+
+_AUTHENTICATE = 0
+_LOGIN = 20
+
+_USER_FIELD_ID = 0
+_CREDENTIAL_FIELD_ID = 3
+_CLEAR_PASSWORD_FIELD_ID = 4
+_SESSION_TOKEN_FIELD_ID = 5
+_SESSION_TTL_FIELD_ID = 6
+
+_HEADER_SIZE = 24
+_HEADER_REMAINING = 16
+
+
+class Enumeration(set):
+    def __getattr__(self, name):
+        if name in self:
+            return name
+        raise AttributeError
+
+    def __getitem__(self, name):
+        if name in self:
+            return name
+        raise AttributeError
+
+AuthMode = Enumeration([
+    # Use internal authentication only.  Hashed password is stored on the server.
+	# Do not send clear password. This is the default.
+
+	"INTERNAL",
+
+    # Use external authentication (like LDAP).  Specific external authentication is
+	# configured on server.  If TLS defined, send clear password on node login via TLS.
+	# Throw exception if TLS is not defined.
+
+	"EXTERNAL",
+
+    # Use external authentication (like LDAP).  Specific external authentication is
+	# configured on server.  Send clear password on node login whether or not TLS is defined.
+	# This mode should only be used for testing purposes because it is not secure authentication.
+
+	"EXTERNAL_INSECURE",
+])
 
 class ClientError(Exception):
         pass
 
 class Client(object):
 
-        def __init__(self, addr, port, timeout=0.7):
-                self.addr = addr
-                self.port = port
-                self.timeout = timeout
-                self.sock = None
+    def __init__(self, addr, port, timeout=DEFAULT_TIMEOUT):
+        self.addr = addr
+        self.port = port
+        self.timeout = timeout
+        self.sock = None
 
-        def connect(self, keyfile=None, certfile=None, ca_certs=None, ciphers=None, tls_enable=False, encrypt_only=False,
-                capath=None, protocols=None, cert_blacklist=None, crl_check=False, crl_check_all=False, tls_name=None):
+    def connect(self, tls_enable=False, tls_name=None, tls_keyfile=None, tls_keyfile_pw=None, tls_certfile=None,
+                 tls_cafile=None, tls_capath=None, tls_ciphers=None, tls_protocols=None, tls_cert_blacklist=None,
+                 tls_crl_check=False, tls_crl_check_all=False):
+        s = None
+        for addrinfo in socket.getaddrinfo(self.addr, self.port, socket.AF_UNSPEC, socket.SOCK_STREAM):
+            af, socktype, proto, canonname, sa = addrinfo
+            ssl_context = None
+
+            try:
+                s = socket.socket(af, socktype, proto)
+                s.settimeout(self.timeout)
+            except socket.error:
                 s = None
-                for res in socket.getaddrinfo(self.addr, self.port, socket.AF_UNSPEC, socket.SOCK_STREAM):
-                        af, socktype, proto, canonname, sa = res
-                        ssl_context = None
-                        try:
-                                s = socket.socket(af, socktype, proto)
-                        except socket.error as msg:
-                                s = None
-                                continue
-                        if tls_enable:
-                                from ssl_context import SSLContext
-                                from OpenSSL import SSL
-                                ssl_context = SSLContext(enable_tls=tls_enable, encrypt_only=encrypt_only, cafile=ca_certs, capath=capath,
-                                           keyfile=keyfile, certfile=certfile, protocols=protocols,
-                                           cipher_suite=ciphers, cert_blacklist=cert_blacklist,
-                                           crl_check=crl_check, crl_check_all=crl_check_all).ctx
-                                s = SSL.Connection(ssl_context,s)
-                        try:
-                                s.connect(sa)
-                                if ssl_context:
-                                        s.set_app_data(tls_name)
-                                        s.do_handshake()
-                        except socket.error as msg:
-                                s.close()
-                                s = None
-                                print "Connect Error" % msg
-                                continue
-                        break
+                continue
 
-                if s is None:
-                        raise ClientError(
-                                "Could not connect to server at %s %s" % (self.addr, self.port))
+            if tls_enable:
+                try:
+                    from ssl.ssl_context import SSLContext
+                    from OpenSSL import SSL
+                except Exception:
+                    raise ClientError("No module named pyOpenSSL")
 
-                self.sock = s
-                return self
+                try:
+                    ssl_context = SSLContext(enable_tls=tls_enable, encrypt_only=None,
+                                  cafile=tls_cafile, capath=tls_capath,
+                                  keyfile=tls_keyfile, keyfile_password=tls_keyfile_pw,
+                                  certfile=tls_certfile, protocols=tls_protocols,
+                                  cipher_suite=tls_ciphers,
+                                  cert_blacklist=tls_cert_blacklist,
+                                  crl_check=tls_crl_check,
+                                  crl_check_all=tls_crl_check_all).ctx
+                    s = SSL.Connection(ssl_context,s)
+                except Exception as ex:
+                    raise ClientError("Could not connect to server at %s %s: %s" % (self.addr, self.port, str(ex)))
 
-        def close(self):
-                if self.sock is not None:
-                        self.sock.settimeout(None)
-                        self.sock.close()
-                        self.sock = None
+            try:
+                s.connect(sa)
+                if ssl_context:
+                    s.set_app_data(tls_name)
+                    # timeout on wrapper might give errors
+                    s.setblocking(1)
+                    s.do_handshake()
+            except Exception as msg:
+                s.close()
+                s = None
+                print "Connect Error %s" % msg
+                continue
 
-        def auth(self, username, password, timeout=None):
+            break
 
+        if s is None:
+            raise ClientError("Could not connect to server at %s %s" % (self.addr, self.port))
+
+        self.sock = s
+
+    def close(self):
+        if self.sock is not None:
+            self.sock.settimeout(None)
+            self.sock.close()
+            self.sock = None
+
+    def auth(self, username, password, auth_mode=AuthMode.INTERNAL):
+        # login and authentication
+        credential = self._hashpassword(password)
+
+        if auth_mode == AuthMode.INTERNAL:
+            sz = len(user) + len(credential) + 34 # 2 * 5 + 24
+            send_buf = self._admin_write_header(sz, _LOGIN, 2)
+            fmt_str = "! I B %ds I B %ds" % (len(user), len(credential))
+            struct.pack_into(fmt_str, send_buf, _HEADER_SIZE,
+                             len(user) + 1, _USER_FIELD_ID, user,
+                             len(credential) + 1, _CREDENTIAL_FIELD_ID, credential)
+
+        else:
+            sz = len(user) + len(credential) + len(password) + 39  # 3 * 5 + 24
+            send_buf = self._admin_write_header(sz, _LOGIN, 3)
+            fmt_str = "! I B %ds I B %ds I B %ds" % (len(user), len(credential), len(password))
+            struct.pack_into(fmt_str, send_buf, _HEADER_SIZE,
+                             len(user) + 1, _USER_FIELD_ID, user,
+                             len(credential) + 1, _CREDENTIAL_FIELD_ID, credential,
+                             len(password) + 1, _CLEAR_PASSWORD_FIELD_ID, password)
+
+        try:
+            # OpenSSL wrapper doesn't support ctypes
+            send_buf = self._buffer_to_string(send_buf)
+            self.sock.sendall(send_buf)
+            recv_buff = self._recv(_HEADER_SIZE)
+            rv = self._admin_parse_header(recv_buff)
+
+            result = rv[2]
+            if result != _OK:
+                # login failed
+
+                if result == _INVALID_COMMAND:
+                    # login is invalid command, so cluster does not support ldap
+                    return self._authenticate(user, password=credential, password_field_id=_CREDENTIAL_FIELD_ID)
+
+                # login failed
+                return result
+
+            sz = int(rv[0] & 0xFFFFFFFFFFFF) - _HEADER_REMAINING
+            field_count = rv[4]
+            if sz < 0 or field_count < 1:
+                raise ClientError("Login failed to retrieve session token")
+
+            recv_buff = self._recv(sz)
+
+            return 0
+
+        except Exception as ex:
+            raise ClientError("Autentication Error %s for '%s' " %(str(ex), username))
+
+    def info(self, request):
+        self._send_request(request)
+        res = self._recv_response()
+        out = re.split("\s+", res, maxsplit=1)
+
+        if len(out) == 2:
+            if out[0].strip("") != request:
+                raise ClientError("Error: requeted %s, got %s" % (request, res))
+            return out[1]
+        else:
+            raise ClientError("Failed to parse response: %s" % (res))
+
+    def _send(self, data):
+        if self.sock:
+            try:
+                self.sock.send(data)
+            except IOError as e:
+                raise ClientError(e)
+            except socket.error as e:
+                raise ClientError(e)
+        else:
+            raise ClientError('socket not available')
+
+    def _send_request(self, request, info_msg_version=2, info_msg_type=1):
+        if request:
+            request += '\n'
+
+        proto = (info_msg_version << 56) | (info_msg_type << 48) | (len(request)+1)
+        fmt_str = "! Q %ds B" % len(request)
+        buf = struct.pack(fmt_str, proto, request, 10)
+
+        self._send(buf)
+
+    def _recv(self, sz):
+        out = ""
+        pos = 0
+        start_time = time.time()
+        while pos < sz:
+            buf = None
+            try:
+                buf = self.sock.recv(sz-pos)
+            except IOError as e:
+                raise ClientError(e)
+
+            if pos == 0:
+                out = buf
+            else:
+                out += buf
+
+            pos += len(buf)
+            if self.timeout and time.time() - start_time > self.timeout:
+                raise ClientError(socket.timeout())
+        return out
+
+    def _recv_response(self):
+        try:
+            buf = self.sock.recv(8)
+            q = struct.unpack_from('! Q', buf, 0)
+            sz = q[0] & 0xFFFFFFFFFFFF
+            if sz > 0:
+                return self._recv(sz)
+        except Exception as ex:
+            raise IOError("Error: %s" % str(ex))
+
+    def _hashpassword(self, password):
+        if password == None:
+            return ""
+
+        if len(password) != 60 or password.startswith("$2a$") == False:
+            try:
                 import bcrypt
 
-                if password == None:
-                        password = ''
-                credential = bcrypt.hashpw(password, SALT)
+            except Exception as e:
+                # bcrypt not installed. This should only be
+                # fatal when authentication is required.
+                raise e
 
-                if timeout is None:
-                        timeout = self.timeout
+            return bcrypt.hashpw(password, "$2a$10$7EqJtq98hPqEX7fNZaFWoO")
 
-                l = 8 + 16
-                l += 4 + 1 + len(username)
-                l += 4 + 1 + len(credential)
+        return ""
 
-                buf = create_string_buffer(l)
-                offset = 0
+    def _admin_write_header(self, sz, command, field_count):
+        send_buf = create_string_buffer(sz)      # from ctypes
+        sz = (_ADMIN_MSG_VERSION << 56) | (_ADMIN_MSG_TYPE << 48) | (sz - 8)
 
-                proto = (MSG_VERSION << 56) | (MSG_TYPE << 48) | (l - 8)
-                STRUCT_PROTO.pack_into(buf, offset, proto)
-                offset += STRUCT_PROTO.size
+        g_struct_admin_header_out = struct.Struct('! Q B B B B 12x')
+        g_struct_admin_header_out.pack_into(send_buf, 0, sz, 0, 0, command, field_count)
 
-                STRUCT_AUTH.pack_into(buf, offset, AUTHENTICATE, 2)
-                offset += STRUCT_AUTH.size
+        return send_buf
 
-                STRUCT_FIELD.pack_into(buf, offset, len(username) + 1, USER)
-                offset += STRUCT_FIELD.size
-                fmt = "! %ds" % len(username)
-                struct.pack_into(fmt, buf, offset, username)
-                offset += len(username)
+    def _admin_parse_header(self, data):
+        g_struct_admin_header_in = struct.Struct('! Q B B B B 12x')
+        return g_struct_admin_header_in.unpack(data)
 
-                STRUCT_FIELD.pack_into(buf, offset, len(credential) + 1, CREDENTIAL)
-                offset += STRUCT_FIELD.size
-                fmt = "! %ds" % len(credential)
-                struct.pack_into(fmt, buf, offset, credential)
-                offset += len(credential)
+    def _buffer_to_string(self, buf):
+        buf_str = ""
+        for s in buf:
+            buf_str += s
+        return buf_str
 
-                self.send(buf)
+    def _authenticate(self, user, password, password_field_id):
+        sz = len(user) + len(password) + 34 # 2 * 5 + 24
+        send_buf = self._admin_write_header(sz, _AUTHENTICATE, 2)
+        fmt_str = "! I B %ds I B %ds" % (len(user), len(password))
+        struct.pack_into(fmt_str, send_buf, _HEADER_SIZE,
+                         len(user) + 1, _USER_FIELD_ID, user,
+                         len(password) + 1, password_field_id, password)
+        try:
+            # OpenSSL wrapper doesn't support ctypes
+            send_buf = self._buffer_to_string(send_buf)
+            self.sock.sendall(send_buf)
+            recv_buff = self._recv(_HEADER_SIZE)
+            rv = self._admin_parse_header(recv_buff)
+            return rv[2]
+        except Exception as ex:
+            raise IOError("Error: %s" % str(ex))
 
-                buf = self.recv(8, timeout)
-                rv = STRUCT_PROTO.unpack(buf)
-                proto = rv[0]
-                pvers = (proto >> 56) & 0xFF
-                ptype = (proto >> 48) & 0xFF
-                psize = (proto & 0xFFFFFFFFFFFF)
-
-                buf = self.recv(psize, timeout)
-                status = ord(buf[1])
-
-                if status != 0:
-                        raise ClientError("Autentication Error %d for '%s' " %
-                                                          (status, username))
-
-        def send(self, data):
-                if self.sock:
-                        try:
-                                r = self.sock.sendall(data)
-                        except IOError as e:
-                                raise ClientError(e)
-                        except socket.error as e:
-                                raise ClientError(e)
-                else:
-                        raise ClientError('socket not available')
-
-        def send_request(self, request, pvers=2, ptype=1):
-                if request:
-                        request += '\n'
-                sz = len(request) + 8
-                buf = create_string_buffer(len(request) + 8)
-                offset = 0
-
-                proto = (pvers << 56) | (ptype << 48) | len(request)
-                STRUCT_PROTO.pack_into(buf, offset, proto)
-                offset = STRUCT_PROTO.size
-
-                fmt = "! %ds" % len(request)
-                struct.pack_into(fmt, buf, offset, request)
-                offset = offset + len(request)
-
-                self.send(buf)
-
-        def recv(self, sz, timeout):
-                out = ""
-                pos = 0
-                start_time = time.time()
-                while pos < sz:
-                        buf = None
-                        try:
-                                buf = self.sock.recv(sz)
-                        except IOError as e:
-                                raise ClientError(e)
-                        if pos == 0:
-                                out = buf
-                        else:
-                                out += buf
-                        pos += len(buf)
-                        if timeout and time.time() - start_time > timeout:
-                                raise ClientError(socket.timeout())
-                return out
-
-        def recv_response(self, timeout=None):
-                buf = self.recv(8, timeout)
-                rv = STRUCT_PROTO.unpack(buf)
-                proto = rv[0]
-                pvers = (proto >> 56) & 0xFF
-                ptype = (proto >> 48) & 0xFF
-                psize = (proto & 0xFFFFFFFFFFFF)
-
-                if psize > 0:
-                        return self.recv(psize, timeout)
-                return ""
-
-        def info(self, request):
-                self.send_request(request)
-                res = self.recv_response(timeout=self.timeout)
-                out = re.split("\s+", res, maxsplit=1)
-                if len(out) == 2:
-                        return out[1]
-                else:
-                        raise ClientError("Failed to parse response: %s" % (res))
 
 ###
 # Argument parsing
@@ -303,17 +408,28 @@ parser.add_argument("-w"
                     , dest="warn"
                     , required=True
                     , help="Warning level")
+parser.add_argument("--auth"
+                    , dest="auth_mode"
+                    , default=str(AuthMode.INTERNAL)
+                    , help="Authentication mode. Values: " + str(list(AuthMode)) + " (default: %(default)s)")
+parser.add_argument("--timeout"
+                    , dest="timeout"
+                    , default=DEFAULT_TIMEOUT
+                    , help="Set timeout value in seconds to node level operations. " +
+                           "TLS connection does not support timeout. (default: %(default)s)")
 parser.add_argument("--tls_enable"
                     , action="store_true"
                     , dest="tls_enable"
                     , help="Enable TLS")
-parser.add_argument("--tls_encrypt_only"
-                    , action="store_true"
-                    , dest="tls_encrypt_only"
-                    , help="TLS Encrypt Only")
+parser.add_argument("--tls_name"
+                    , dest="tls_name"
+                    , help="The expected name on the server side certificate")
 parser.add_argument("--tls_keyfile"
                     , dest="tls_keyfile"
                     , help="The private keyfile for your client TLS Cert")
+parser.add_argument("--tls_keyfile_pw"
+                    , dest="tls_keyfile_pw"
+                    , help="Password to load protected tls_keyfile")
 parser.add_argument("--tls_certfile"
                     , dest="tls_certfile"
                     , help="The client TLS cert")
@@ -323,26 +439,23 @@ parser.add_argument("--tls_cafile"
 parser.add_argument("--tls_capath"
                     , dest="tls_capath"
                     , help="The path to a directory containing CA certs and/or CRLs")
-parser.add_argument("--tls_protocols"
-                    , dest="tls_protocols"
-                    , help="The TLS protocol to use. Available choices: SSLv2, SSLv3, TLSv1, TLSv1.1, TLSv1.2, all. An optional + or - can be appended before the protocol to indicate specific inclusion or exclusion.")
-parser.add_argument("--tls_blacklist"
-                    , dest="tls_blacklist"
-                    , help="Blacklist including serial number of certs to revoke")
 parser.add_argument("--tls_ciphers"
                     , dest="tls_ciphers"
                     , help="Ciphers to include. See https://www.openssl.org/docs/man1.0.1/apps/ciphers.html for cipher list format")
-parser.add_argument("--tls_crl"
-                    , dest="tls_crl"
+parser.add_argument("--tls_protocols"
+                    , dest="tls_protocols"
+                    , help="The TLS protocol to use. Available choices: SSLv2, SSLv3, TLSv1, TLSv1.1, TLSv1.2, all. An optional + or - can be appended before the protocol to indicate specific inclusion or exclusion.")
+parser.add_argument("--tls_cert_blacklist"
+                    , dest="tls_cert_blacklist"
+                    , help="Blacklist including serial number of certs to revoke")
+parser.add_argument("--tls_crl_check"
+                    , dest="tls_crl_check"
                     , action="store_true"
                     , help="Checks SSL/TLS certs against vendor's Certificate Revocation Lists for revoked certificates. CRLs are found in path specified by --tls_capath. Checks the leaf certificates only")
-parser.add_argument("--tls_crlall"
-                    , dest="tls_crlall"
+parser.add_argument("--tls_crl_checkall"
+                    , dest="tls_crl_check_all"
                     , action="store_true"
                     , help="Check on all entries within the CRL chain")
-parser.add_argument("--tls_name"
-                    , dest="tls_name"
-                    , help="The expected name on the server side certificate")
 
 args = parser.parse_args()
 
@@ -407,18 +520,35 @@ def parseRange(myRange):
 #
 
 try:
-    client = Client(addr=args.host,port=args.port)
-    client.connect(keyfile=args.tls_keyfile, certfile=args.tls_certfile, ca_certs=args.tls_cafile, ciphers=args.tls_ciphers, tls_enable=args.tls_enable,
-                   encrypt_only=args.tls_encrypt_only, capath=args.tls_capath, protocols=args.tls_protocols, cert_blacklist=args.tls_blacklist,
-                   crl_check=args.tls_crl,crl_check_all=args.tls_crlall, tls_name=args.tls_name)
+    client = Client(addr=args.host,port=args.port, timeout=args.timeout)
+    client.connect(tls_enable=args.tls_enable, tls_name=args.tls_name,
+                   tls_keyfile=args.tls_keyfile, tls_keyfile_pw=args.tls_keyfile_pw, tls_certfile=args.tls_certfile,
+                   tls_cafile=args.tls_cafile, tls_capath=args.tls_capath, tls_ciphers=args.tls_ciphers,
+                   tls_protocols=args.tls_protocols, tls_cert_blacklist=args.tls_cert_blacklist,
+                   tls_crl_check=args.tls_crl_check, tls_crl_check_all=args.tls_crl_check_all,)
 except Exception as e:
     print("Failed to connect to the Aerospike cluster at %s:%s"%(args.host,args.port))
     print e
     sys.exit(STATE_UNKNOWN)
-if user:
-    status = client.auth(user,password)
 
-r = client.info(arg_value).strip()
+if user:
+    try:
+        status = client.auth(username=user, password=password, auth_mode=args.auth_mode)
+        if status != 0:
+            print("Failed to authenticate connection to the Aerospike cluster at %s:%s, status: %s"%(args.host,args.port, str(status)))
+            sys.exit(STATE_UNKNOWN)
+    except Exception as e:
+        print("Failed to authenticate connection to the Aerospike cluster at %s:%s"%(args.host,args.port))
+        print e
+        sys.exit(STATE_UNKNOWN)
+
+try:
+    r = client.info(arg_value).strip()
+except Exception as e:
+    print("Failed to execute asinfo command %s on the Aerospike cluster at %s:%s"%(arg_value, args.host, args.port))
+    print e
+    sys.exit(STATE_UNKNOWN)
+
 client.close()
 
 if args.stat not in r:
