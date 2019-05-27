@@ -55,19 +55,19 @@ you are not required to interact with it.
 ###  Usage
 ```bash
 usage: aerospike_nagios.py [-u] [-U USER] [-P [PASSWORD]]
-                           [--credentials-file CREDENTIALS] [-v]
+                           [--credentials-file CREDENTIALS]
+                           [--auth-mode AUTH_MODE] [-v]
                            [-n NAMESPACE | -l LATENCY | -x DC] -s STAT
                            [-p PORT] [-h HOST] -c CRIT -w WARN
-                           [--auth AUTH_MODE] [--timeout TIMEOUT]
-                           [--tls_enable] [--tls_name TLS_NAME]
-                           [--tls_keyfile TLS_KEYFILE]
-                           [--tls_keyfile_pw TLS_KEYFILE_PW]
-                           [--tls_certfile TLS_CERTFILE]
-                           [--tls_cafile TLS_CAFILE] [--tls_capath TLS_CAPATH]
-                           [--tls_ciphers TLS_CIPHERS]
-                           [--tls_protocols TLS_PROTOCOLS]
-                           [--tls_cert_blacklist TLS_CERT_BLACKLIST]
-                           [--tls_crl_check] [--tls_crl_checkall]
+                           [--timeout TIMEOUT] [--tls-enable]
+                           [--tls-name TLS_NAME] [--tls-keyfile TLS_KEYFILE]
+                           [--tls-keyfile-pw TLS_KEYFILE_PW]
+                           [--tls-certfile TLS_CERTFILE]
+                           [--tls-cafile TLS_CAFILE] [--tls-capath TLS_CAPATH]
+                           [--tls-ciphers TLS_CIPHERS]
+                           [--tls-protocols TLS_PROTOCOLS]
+                           [--tls-cert-blacklist TLS_CERT_BLACKLIST]
+                           [--tls-crl-check] [--tls-crl-check-all]
 
 optional arguments:
   -u, --usage, --help   Show this help message and exit
@@ -77,6 +77,9 @@ optional arguments:
   --credentials-file CREDENTIALS
                         Path to the credentials file. Use this in place of
                         --user and --password.
+  --auth-mode AUTH_MODE
+                        Authentication mode. Values: ['EXTERNAL_INSECURE',
+                        'INTERNAL', 'EXTERNAL'] (default: INTERNAL)
   -v, --verbose         Enable verbose logging
   -n NAMESPACE, --namespace NAMESPACE
                         Namespace name. eg: bar
@@ -91,38 +94,37 @@ optional arguments:
                         Critical level
   -w WARN, --warning WARN
                         Warning level
-  --auth AUTH_MODE      Authentication mode. Values: ['EXTERNAL_INSECURE',
-                        'INTERNAL', 'EXTERNAL'] (default: INTERNAL)
   --timeout TIMEOUT     Set timeout value in seconds to node level operations.
                         TLS connection does not support timeout. (default: 5)
-  --tls_enable          Enable TLS
-  --tls_name TLS_NAME   The expected name on the server side certificate
-  --tls_keyfile TLS_KEYFILE
+  --tls-enable          Enable TLS
+  --tls-name TLS_NAME   The expected name on the server side certificate
+  --tls-keyfile TLS_KEYFILE
                         The private keyfile for your client TLS Cert
-  --tls_keyfile_pw TLS_KEYFILE_PW
+  --tls-keyfile-pw TLS_KEYFILE_PW
                         Password to load protected tls_keyfile
-  --tls_certfile TLS_CERTFILE
+  --tls-certfile TLS_CERTFILE
                         The client TLS cert
-  --tls_cafile TLS_CAFILE
+  --tls-cafile TLS_CAFILE
                         The CA for the server's certificate
-  --tls_capath TLS_CAPATH
+  --tls-capath TLS_CAPATH
                         The path to a directory containing CA certs and/or
                         CRLs
-  --tls_ciphers TLS_CIPHERS
+  --tls-ciphers TLS_CIPHERS
                         Ciphers to include. See https://www.openssl.org/docs/m
                         an1.0.1/apps/ciphers.html for cipher list format
-  --tls_protocols TLS_PROTOCOLS
+  --tls-protocols TLS_PROTOCOLS
                         The TLS protocol to use. Available choices: TLSv1,
                         TLSv1.1, TLSv1.2, all. An optional + or - can be
                         appended before the protocol to indicate specific
                         inclusion or exclusion.
-  --tls_cert_blacklist TLS_CERT_BLACKLIST
+  --tls-cert-blacklist TLS_CERT_BLACKLIST
                         Blacklist including serial number of certs to revoke
-  --tls_crl_check       Checks SSL/TLS certs against vendor's Certificate
+  --tls-crl-check       Checks SSL/TLS certs against vendor's Certificate
                         Revocation Lists for revoked certificates. CRLs are
                         found in path specified by --tls_capath. Checks the
                         leaf certificates only
-  --tls_crl_checkall    Check on all entries within the CRL chain
+  --tls-crl-check-all   Check on all entries within the CRL chain
+
 ```
 
 To monitor a specific general statistic:  
@@ -143,7 +145,7 @@ eg:
 `aerospike_nagios.py -h localhost -s 1ms  -l {test}-read -w 8 -c 10`
 
 To utilize SSL/TLS standard auth:
-`aerospike_nagios.py -h YOUR_ASD_HOST -p YOUR_SECURED_PORT -s STAT_NAME --tls_enable --tls_cafile YOUR_CA_PEM --tls_name YOUR_ASD_CERT_NAME -w WARN_LEVEL -c CRIT_LEVEL`
+`aerospike_nagios.py -h YOUR_ASD_HOST -p YOUR_SECURED_PORT -s STAT_NAME --tls-enable --tls-cafile YOUR_CA_PEM --tls-name YOUR_ASD_CERT_NAME -w WARN_LEVEL -c CRIT_LEVEL`
 
 ### Alert Levels
 
@@ -158,4 +160,8 @@ Example usage can be found in the examples/aerospike.cfg file.
 You can specify User and Password for authentication via the -U/--user and -P/--password parameters.
 The Password is also an interactive prompt if you leave it empty.
                         
-If this is not preferable, you can also specify a credentials file with -c/--credentials-file. It is a simple 2 line file, with the username and password on each line, in that order. With this method, the credentials file can be secured via other means (eg: chmod 600) and prevent snooping.
+If this is not preferable, you can also specify a credentials file with -c/--credentials-file. 
+It is a simple 2 line file, with the username and password on each line, in that order. 
+With this method, the credentials file can be secured via other means (eg: chmod 600) and prevent snooping.
+
+`AuthMode` is optional parameter to specify authentication mode. It's default value is INTERNAL.

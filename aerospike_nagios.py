@@ -26,7 +26,6 @@ __version__ = "1.4.1"
 
 import sys
 import yaml
-import types
 import socket
 import re
 import argparse
@@ -365,6 +364,10 @@ parser.add_argument("-P"
 parser.add_argument("--credentials-file"
                     , dest="credentials"
                     , help="Path to the credentials file. Use this in place of --user and --password.")
+parser.add_argument("--auth-mode"
+                    , dest="auth_mode"
+                    , default=str(AuthMode.INTERNAL)
+                    , help="Authentication mode. Values: " + str(list(AuthMode)) + " (default: %(default)s)")
 parser.add_argument("-v"
                     , "--verbose"
                     , action="store_true"
@@ -408,51 +411,47 @@ parser.add_argument("-w"
                     , dest="warn"
                     , required=True
                     , help="Warning level")
-parser.add_argument("--auth"
-                    , dest="auth_mode"
-                    , default=str(AuthMode.INTERNAL)
-                    , help="Authentication mode. Values: " + str(list(AuthMode)) + " (default: %(default)s)")
 parser.add_argument("--timeout"
                     , dest="timeout"
                     , default=DEFAULT_TIMEOUT
                     , help="Set timeout value in seconds to node level operations. " +
                            "TLS connection does not support timeout. (default: %(default)s)")
-parser.add_argument("--tls_enable"
+parser.add_argument("--tls-enable"
                     , action="store_true"
                     , dest="tls_enable"
                     , help="Enable TLS")
-parser.add_argument("--tls_name"
+parser.add_argument("--tls-name"
                     , dest="tls_name"
                     , help="The expected name on the server side certificate")
-parser.add_argument("--tls_keyfile"
+parser.add_argument("--tls-keyfile"
                     , dest="tls_keyfile"
                     , help="The private keyfile for your client TLS Cert")
-parser.add_argument("--tls_keyfile_pw"
+parser.add_argument("--tls-keyfile-pw"
                     , dest="tls_keyfile_pw"
                     , help="Password to load protected tls_keyfile")
-parser.add_argument("--tls_certfile"
+parser.add_argument("--tls-certfile"
                     , dest="tls_certfile"
                     , help="The client TLS cert")
-parser.add_argument("--tls_cafile"
+parser.add_argument("--tls-cafile"
                     , dest="tls_cafile"
                     , help="The CA for the server's certificate")
-parser.add_argument("--tls_capath"
+parser.add_argument("--tls-capath"
                     , dest="tls_capath"
                     , help="The path to a directory containing CA certs and/or CRLs")
-parser.add_argument("--tls_ciphers"
+parser.add_argument("--tls-ciphers"
                     , dest="tls_ciphers"
                     , help="Ciphers to include. See https://www.openssl.org/docs/man1.0.1/apps/ciphers.html for cipher list format")
-parser.add_argument("--tls_protocols"
+parser.add_argument("--tls-protocols"
                     , dest="tls_protocols"
                     , help="The TLS protocol to use. Available choices: TLSv1, TLSv1.1, TLSv1.2, all. An optional + or - can be appended before the protocol to indicate specific inclusion or exclusion.")
-parser.add_argument("--tls_cert_blacklist"
+parser.add_argument("--tls-cert-blacklist"
                     , dest="tls_cert_blacklist"
                     , help="Blacklist including serial number of certs to revoke")
-parser.add_argument("--tls_crl_check"
+parser.add_argument("--tls-crl-check"
                     , dest="tls_crl_check"
                     , action="store_true"
                     , help="Checks SSL/TLS certs against vendor's Certificate Revocation Lists for revoked certificates. CRLs are found in path specified by --tls_capath. Checks the leaf certificates only")
-parser.add_argument("--tls_crl_checkall"
+parser.add_argument("--tls-crl-check-all"
                     , dest="tls_crl_check_all"
                     , action="store_true"
                     , help="Check on all entries within the CRL chain")
