@@ -34,16 +34,16 @@ sudo pip install -r requirements.txt
 
     > Eg: /opt/aerospike/bin/
 
-1. Copy aerospike\_schema.yaml and ssl directory to the same directory
+2. Copy aerospike\_schema.yaml and ssl directory to the same directory
 
-1. Copy examples/aerospike.cfg into your nagios conf.d directory
+3. Copy examples/aerospike.cfg into your nagios conf.d directory
 
    > /etc/nagios/conf.d if installed from repo  
    > /usr/local/nagios/etc/objects if installed from source
 
-1. Edit aerospike.cfg to add your aerospike hosts into the hostgroup
+4. Edit aerospike.cfg to add your aerospike hosts into the hostgroup
 
-1. Restart/reload nagios
+5. Restart/reload nagios
 
 
 ### Aerospike nagios Plugin
