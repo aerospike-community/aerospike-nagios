@@ -22,7 +22,7 @@
 
 __author__ = "Aerospike"
 __copyright__ = "Copyright 2019 Aerospike"
-__version__ = "1.4.4"
+__version__ = "2.0.0"
 
 import sys
 import yaml
