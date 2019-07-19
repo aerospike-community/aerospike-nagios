@@ -488,31 +488,57 @@ if args.credentials:
 NAGIOS_OUTER_THRESHOLD=0        # alert if ouside range of { start ... end }        eg: 10:20
 NAGIOS_INNER_THRESHOLD=1        # alert if inside range of { start ... end }        eg: @10:20
 
-def parseRange(myRange):
+
+def parse_range(range_arg):
     # check syntax
-    match = re.match("^@?(-?\d+|~)$|^@?(-?\d*|~):-?\d+$",myRange)
+    range_arg = range_arg.strip()
+    match = re.match("^@?(-?\d+|~)$|^@?(-?\d*|~):(-?\d+)?$", range_arg)
     if not match:
-        print "Threshold format is incorrect. The format is: [@]start:end. Entered value: %s"%(myRange)
+        print "Threshold format is incorrect. The format is: [@]start:end. Entered value: %s"%(range_arg)
         sys.exit(STATE_UNKNOWN)
+
     # theshold mode
     mode = NAGIOS_OUTER_THRESHOLD
-    if myRange.startswith("@"):
-        myRange = myRange.strip("@")
+    val_range = range_arg
+    if val_range.startswith("@"):
+        val_range = val_range.strip("@")
         mode=NAGIOS_INNER_THRESHOLD
-    # grab start/end values. Start is optional
-    values = myRange.split(":")
-    end = values[-1]
+
+    # grab start/end values
+
+    values = val_range.split(":")
+    end = values[-1].strip()
     if end == '':
-        end = 0
-    try:
-        start = float(values[-2])
-    except:
+        # infinity
+        end = '~'
+
+    if end != '~':
+        end = float(end)
+
+    if len(values) == 1:
+        # only end given
         start = 0
-    if start != "~":
+    else:
+        start = values[-2].strip()
+
+    if start != '~':
+        start = float(start)
+
+    if start != '~' and end != '~':
         if float(start) > float(end):
-            print "Error: start threshold is greater than the end threshold: %s"%(myRange)
+            print "Error: start threshold is greater than the end threshold: %s"%(range_arg)
             sys.exit(STATE_UNKNOWN)
-    return { "start": start, "end" : int(end), "mode" : mode } 
+
+    return { "start": start, "end" : end, "mode" : mode }
+
+def is_outside(value, start, end):
+    if start != '~' and value < start:
+        return True
+
+    if end != '~' and value > end:
+        return True
+
+    return False
 
 #
 # MAINLINE
@@ -633,38 +659,30 @@ else:
         append_perf=True
     except:
         pass
+
     # Warning threshold first
     if args.warn != "0":
-        warn = parseRange(args.warn)
+        warn = parse_range(args.warn)
+
         if warn["mode"] == NAGIOS_OUTER_THRESHOLD:
-            if warn["start"] == "~":
-                if value >=  warn["end"]:
-                    RETURN_VAL=STATE_WARNING
-            elif value < warn["start"] or value >= warn["end"]:
-                    RETURN_VAL=STATE_WARNING
+            if is_outside(value, warn["start"], warn["end"]):
+                RETURN_VAL=STATE_WARNING
+
         else: # NAGIOS_INNER_THRESHOLD
-            if warn["start"] == "~":
-                if value <  warn["end"]:
-                    RETURN_VAL=STATE_WARNING
-            elif value > warn["start"] and value < warn["end"]:
-                    RETURN_VAL=STATE_WARNING
+            if not is_outside(value, warn["start"], warn["end"]):
+                RETURN_VAL=STATE_WARNING
+
     # Critical threshold override warning threshold
     if args.crit != "0":
-        crit = parseRange(args.crit)
+        crit = parse_range(args.crit)
+
         if crit["mode"] == NAGIOS_OUTER_THRESHOLD:
-            if crit["start"] == "~":
-                if value >=  crit["end"]:
-                    RETURN_VAL=STATE_CRITICAL
-            elif value < crit["start"] or value >= crit["end"]:
-                    RETURN_VAL=STATE_CRITICAL
+            if is_outside(value, crit["start"], crit["end"]):
+                RETURN_VAL=STATE_CRITICAL
+
         else: # NAGIOS_INNER_THRESHOLD
-            if crit["start"] == "~":
-                if value <  crit["end"]:
-                    RETURN_VAL=STATE_CRITICAL
-            elif value > crit["start"] and value < crit["end"]:
-                    RETURN_VAL=STATE_CRITICAL
-
-
+            if not is_outside(value, crit["start"], crit["end"]):
+                RETURN_VAL=STATE_CRITICAL
 
 # Append Unit of measurement
 perf_stat = str(value)+uom
