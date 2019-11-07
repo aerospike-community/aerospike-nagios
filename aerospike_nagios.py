@@ -611,8 +611,7 @@ else:
 # Load schema file
 #
 with open(schema_path) as schema_file:
-    schema = yaml.load(schema_file)
-
+    schema = yaml.load(schema_file, Loader=yaml.SafeLoader)
 
 #
 # Find  unit of measurement for the statstic
