@@ -159,7 +159,7 @@ class Client(object):
             except Exception as msg:
                 s.close()
                 s = None
-                print "Connect Error %s" % msg
+                print("Connect Error %s" % msg)
                 continue
 
             break
@@ -480,7 +480,7 @@ if args.credentials:
         user = cred_file.readline().strip()
         password = cred_file.readline().strip()
     except IOError:
-        print "Unable to read credentials file: %s"%args.credentials
+        print("Unable to read credentials file: %s"%args.credentials)
 
 # Takes a range in the format of [@]start:end
 # Negative values also ok
@@ -494,7 +494,7 @@ def parse_range(range_arg):
     range_arg = range_arg.strip()
     match = re.match("^@?(-?\d+|~)$|^@?(-?\d*|~):(-?\d+)?$", range_arg)
     if not match:
-        print "Threshold format is incorrect. The format is: [@]start:end. Entered value: %s"%(range_arg)
+        print("Threshold format is incorrect. The format is: [@]start:end. Entered value: %s"%(range_arg))
         sys.exit(STATE_UNKNOWN)
 
     # theshold mode
@@ -526,7 +526,7 @@ def parse_range(range_arg):
 
     if start != '~' and end != '~':
         if float(start) > float(end):
-            print "Error: start threshold is greater than the end threshold: %s"%(range_arg)
+            print("Error: start threshold is greater than the end threshold: %s"%(range_arg))
             sys.exit(STATE_UNKNOWN)
 
     return { "start": start, "end" : end, "mode" : mode }
@@ -553,7 +553,7 @@ try:
                    tls_crl_check=args.tls_crl_check, tls_crl_check_all=args.tls_crl_check_all,)
 except Exception as e:
     print("Failed to connect to the Aerospike cluster at %s:%s"%(args.host,args.port))
-    print e
+    print(e)
     sys.exit(STATE_UNKNOWN)
 
 if user:
@@ -564,28 +564,28 @@ if user:
             sys.exit(STATE_UNKNOWN)
     except Exception as e:
         print("Failed to authenticate connection to the Aerospike cluster at %s:%s"%(args.host,args.port))
-        print e
+        print(e)
         sys.exit(STATE_UNKNOWN)
 
 try:
     r = client.info(arg_value).strip()
 except Exception as e:
     print("Failed to execute asinfo command %s on the Aerospike cluster at %s:%s"%(arg_value, args.host, args.port))
-    print e
+    print(e)
     sys.exit(STATE_UNKNOWN)
 
 client.close()
 
 if r == None:
-    print "request to ",args.host,":",args.port," returned no data."
+    print("request to ",args.host,":",args.port," returned no data.")
     sys.exit(STATE_CRITICAL)
 
 if r == -1:
-    print "request to ",args.host,":",args.port," returned error."
+    print("request to ",args.host,":",args.port," returned error.")
     sys.exit(STATE_CRITICAL)
 
 if args.stat not in r:
-    print "%s is not a known statistic." %args.stat
+    print("%s is not a known statistic." %args.stat)
     sys.exit(STATE_UNKNOWN)
 
 value = None
@@ -693,7 +693,7 @@ perf_stat = str(value)+uom
 
 if stat_line != "":
     if append_perf:
-        print '%s|%s=%s;%s;%s' % (stat_line,args.stat,perf_stat,args.warn,args.crit) 
+        print('%s|%s=%s;%s;%s' % (stat_line,args.stat,perf_stat,args.warn,args.crit))
     else:
-        print '%s' % (stat_line)
+        print('%s' % (stat_line))
     sys.exit(RETURN_VAL)
