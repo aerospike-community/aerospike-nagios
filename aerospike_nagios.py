@@ -4,7 +4,7 @@
 # either all names or a certain name
 #
 
-# Copyright 2013-2019 Aerospike, Inc.
+# Copyright 2013-2020 Aerospike, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@
 # Description: Nagios script for Aerospike
 
 __author__ = "Aerospike"
-__copyright__ = "Copyright 2019 Aerospike"
+__copyright__ = "Copyright 2020 Aerospike"
 __version__ = "2.0.0"
 
 import sys
