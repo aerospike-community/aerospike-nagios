@@ -16,7 +16,10 @@ The goal is to reduce the complexity to 2 simple steps.
 - Can monitor any stat returned by
   - `$ asinfo -v 'statistics' [-h host]`
   - `$ asinfo -v 'namespace/<NAMESPACE NAME>' [-h host]`
-  - `$ asinfo -v 'dc/<DATACENTER>' [-h host]`
+  - `$ asinfo -v 'sets/<NAMESPACE NAME>/<SET NAME>' [-h host]`
+  - `$ asinfo -v 'bins/<NAMESPACE NAME>' [-h host]`
+  - `$ asinfo -v 'sindex/<NAMESPACE NAME>/<SINDEX NAME>' [-h host]`
+  - `$ asinfo -v 'get-stats:context=xdr;dc=<DATACENTER>' [-h host]` or `$ asinfo -v 'dc/<DATACENTER>' [-h host]`
   - `$ asinfo -v 'latency:hist=<LATCENCY STAT>' [-h host]`
 
 ### Requirements
@@ -42,6 +45,11 @@ See requirements.txt.
 
 4. Edit aerospike.cfg to add your aerospike hosts into the hostgroup
 
+5. Edit nagios.cfg by adding a cfg_file directive that points to the location of aerospike.cfg.
+    >cfg_file=/etc/nagios/conf.d if installed from repo  
+    >cfg_file=/usr/local/nagios/etc/objects if installed from source
+  **Note:** Not required if cfg_dir directive is being used.
+
 5. Restart/reload nagios
 
 
@@ -58,10 +66,11 @@ $ python /opt/aerospike/bin/aerospike_nagios.py --help
 usage: aerospike_nagios.py [-u] [-U USER] [-P [PASSWORD]]
                            [--credentials-file CREDENTIALS]
                            [--auth-mode AUTH_MODE] [-v]
-                           [-n NAMESPACE | -l LATENCY | -x DC] -s STAT
-                           [-p PORT] [-h HOST] -c CRIT -w WARN
-                           [--timeout TIMEOUT] [--tls-enable]
-                           [--tls-name TLS_NAME] [--tls-keyfile TLS_KEYFILE]
+                           [-n NAMESPACE | -l LATENCY | -x DC]
+                           [-t SET | -b | -i SINDEX] -s STAT [-p PORT]
+                           [-h HOST] -c CRIT -w WARN [--timeout TIMEOUT]
+                           [--tls-enable] [--tls-name TLS_NAME]
+                           [--tls-keyfile TLS_KEYFILE]
                            [--tls-keyfile-pw TLS_KEYFILE_PW]
                            [--tls-certfile TLS_CERTFILE]
                            [--tls-cafile TLS_CAFILE] [--tls-capath TLS_CAPATH]
@@ -86,7 +95,13 @@ optional arguments:
                         Namespace name. eg: bar
   -l LATENCY, --latency LATENCY
                         Options: see output of asinfo -v 'latency:hist' -l
-  -x DC, --xdr DC       Datacenter name. eg: myDC1
+  -x DC, --xdr DC       Datacenter name. eg: myDC1.
+  -t SET, --set SET     Set name. eg: testSet. Statistic for a particular set
+                        in a particular namespace.
+  -b, --bin             Bin usage information for a particular namspace.
+  -i SINDEX, --sindex SINDEX
+                        Secondary Index name. eg: age. Statistic for a
+                        particular secondary index in a particular namespace.
   -s STAT, --stat STAT  Statistic name. eg: cluster_size
   -p PORT, ---port PORT
                         PORT for Aerospike server (default: 3000)
@@ -102,7 +117,7 @@ optional arguments:
   --tls-keyfile TLS_KEYFILE
                         The private keyfile for your client TLS Cert
   --tls-keyfile-pw TLS_KEYFILE_PW
-                        Password to load protected --tls-keyfile
+                        Password to load protected tls_keyfile
   --tls-certfile TLS_CERTFILE
                         The client TLS cert
   --tls-cafile TLS_CAFILE
@@ -112,7 +127,7 @@ optional arguments:
                         CRLs
   --tls-ciphers TLS_CIPHERS
                         Ciphers to include. See https://www.openssl.org/docs/m
-                        an1.1.0/man1/ciphers.html for cipher list format
+                        an1.0.1/apps/ciphers.html for cipher list format
   --tls-protocols TLS_PROTOCOLS
                         The TLS protocol to use. Available choices: TLSv1,
                         TLSv1.1, TLSv1.2, all. An optional + or - can be
@@ -122,9 +137,10 @@ optional arguments:
                         Blacklist including serial number of certs to revoke
   --tls-crl-check       Checks SSL/TLS certs against vendor's Certificate
                         Revocation Lists for revoked certificates. CRLs are
-                        found in path specified by --tls-capath. Checks the
+                        found in path specified by --tls_capath. Checks the
                         leaf certificates only
   --tls-crl-check-all   Check on all entries within the CRL chain
+
 
 ```
 ```
@@ -138,12 +154,27 @@ To monitor a specific general statistic:
 aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -w WARN_LEVEL -c CRIT_LEVEL
 ```
 
-To monitor a specific statistic in a namepsace:  
+To monitor a specific metric in a namepsace:  
 ```
 aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -n YOUR_NAMESPACE -w WARN_LEVEL -c CRIT_LEVEL
 ```
 
-To monitor a specfic statistic in xdr:  
+To monitor a specific metric in a set:  
+```
+aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -n YOUR_NAMESPACE -t YOUR_SET -w WARN_LEVEL -c CRIT_LEVEL
+```
+
+To monitor a specific metric in bins:  
+```
+aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -n YOUR_NAMESPACE -b -w WARN_LEVEL -c CRIT_LEVEL
+```
+
+To monitor a specific metric in a sindex:  
+```
+aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -n YOUR_NAMESPACE -i YOUR_SINDEX -w WARN_LEVEL -c CRIT_LEVEL
+```
+
+To monitor a specific metric in xdr:  
 ```
 aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -x DATACENTER -w WARN_LEVEL -c CRIT_LEVEL
 ```
