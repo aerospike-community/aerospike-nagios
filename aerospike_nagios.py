@@ -43,7 +43,6 @@ STATE_DEPENDENT=4
 
 
 schema_path = '/opt/aerospike/bin/aerospike_schema.yaml'
-arg_value = "statistics"
 stat_line = None
 
 DEFAULT_TIMEOUT = 5
@@ -373,19 +372,34 @@ parser.add_argument("-v"
                     , action="store_true"
                     , dest="verbose"
                     , help="Enable verbose logging")
-group = parser.add_mutually_exclusive_group()
-group.add_argument("-n"
+group1 = parser.add_mutually_exclusive_group()
+group1.add_argument("-n"
                     , "--namespace"
                     , dest="namespace"
                     , help="Namespace name. eg: bar")
-group.add_argument("-l"
+group1.add_argument("-l"
                     , "--latency"
                     , dest="latency"
                     , help="Options: see output of asinfo -v 'latency:hist' -l")
-group.add_argument("-x"
+group1.add_argument("-x"
                     , "--xdr"
                     , dest="dc"
-                    , help="Datacenter name. eg: myDC1")
+                    , help="Datacenter name. eg: myDC1.")
+group2 = parser.add_mutually_exclusive_group()
+group2.add_argument("-t"
+                    , "--set"
+                    , dest="set"
+                    , help="Set name. eg: testSet. Statistic for a particular set in a particular namespace.")
+group2.add_argument("-b"
+                    , "--bin"
+                    , dest="bin"
+                    , action="store_const"
+                    , const=True
+                    , help="Bin usage information for a particular namspace.")
+group2.add_argument("-i"
+                    , "--sindex"
+                    , dest="sindex"
+                    , help="Secondary Index name. eg: age. Statistic for a particular secondary index in a particular namespace.")
 parser.add_argument("-s"
                     , "--stat"
                     , dest="stat"
@@ -458,12 +472,9 @@ parser.add_argument("--tls-crl-check-all"
 
 args = parser.parse_args()
 
-if args.dc:
-  arg_value='dc/'+args.dc
-elif args.namespace:
-  arg_value='namespace/'+args.namespace
-elif args.latency:
-  arg_value='latency:hist='+args.latency
+conditional_args = [args.set, args.bin, args.sindex]
+if not all(arg is None for arg in conditional_args) and args.namespace is None:
+    parser.error("--set, --bin, and --sindex require --namespace")
 
 user = None
 password = None
@@ -540,6 +551,13 @@ def is_outside(value, start, end):
 
     return False
 
+def search(res, name, delim=';'):
+    for s in res.split()[-1].split(delim):    # remove leading category, then split k=v tuples
+        if s.startswith(name + "="):
+            value = s.split(name + "=")[-1]
+            return value
+    return None
+
 #
 # MAINLINE
 #
@@ -567,6 +585,36 @@ if user:
         print(e)
         sys.exit(STATE_UNKNOWN)
 
+arg_value = "statistics"
+
+req = 'build'
+try:
+    version = client.info(req).split('.')
+
+except Exception as e:
+        print("Failed to execute asinfo command %s on the Aerospike cluster at %s:%s"%(req, args.host, args.port))
+        print(e)
+        sys.exit(STATE_UNKNOWN)
+
+if args.dc:
+        arg_value='dc/'+args.dc
+
+        # Version 5.0+ got removed dc/DC_NAME and added get-stats:context=xdr;dc=DC_NAME
+        if int(version[0]) >= 5:
+            arg_value='get-stats:context=xdr;dc='+args.dc
+
+# namespace must be checked after sets, bins, and sindex
+elif args.set:
+    arg_value='sets/'+args.namespace+'/'+args.set
+elif args.bin:
+    arg_value='bins/'+args.namespace
+elif args.sindex:
+    arg_value='sindex/'+args.namespace+'/'+args.sindex
+elif args.namespace:
+    arg_value='namespace/'+args.namespace
+elif args.latency:
+    arg_value='latency:hist='+args.latency
+
 try:
     r = client.info(arg_value).strip()
 except Exception as e:
@@ -588,6 +636,10 @@ if args.stat not in r:
     print("%s is not a known statistic." %args.stat)
     sys.exit(STATE_UNKNOWN)
 
+# Remove trailing ";" if there is one.
+if r[-1] == ";":
+    r = r[:-1]
+
 value = None
 latency_time = ["1ms", "8ms", "64ms"]
 if args.stat in latency_time:
@@ -600,12 +652,18 @@ if args.stat in latency_time:
             args.stat = ">" + args.stat
         if value != None:
             stat_line = 'Aerospike Stats - ' + arg_value + ": " + args.stat + "=" + value
+elif args.set:
+    value = search(r, args.stat, delim=':')
+    if value != None:
+        stat_line = 'Aerospike Stats - ' + args.stat + "=" + value
+elif args.bin:
+    value = search(r, args.stat, delim=',')
+    if value != None:
+        stat_line = 'Aerospike Stats - ' + args.stat + "=" + value
 else:
-    for s in r.split()[-1].split(";"):    # remove leading category, then split k=v tuples
-        if s.startswith(args.stat + "="):
-            value = s.split(args.stat + "=")[-1]
-        if value != None:
-            stat_line = 'Aerospike Stats - ' + args.stat + "=" + value
+    value = search(r, args.stat)
+    if value != None:
+        stat_line = 'Aerospike Stats - ' + args.stat + "=" + value
 
 #
 # Load schema file
