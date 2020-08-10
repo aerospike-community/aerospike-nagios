@@ -637,7 +637,7 @@ if args.stat not in r:
     sys.exit(STATE_UNKNOWN)
 
 # Remove trailing ";" if there is one.
-if r[-1] == ";":
+if r.endswith(";"):
     r = r[:-1]
 
 value = None
