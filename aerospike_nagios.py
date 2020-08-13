@@ -676,18 +676,13 @@ with open(schema_path) as schema_file:
 # Find  unit of measurement for the statstic
 #
 
-uom = ''
+units = ''
 
-for category in schema:
-    if "operations" in schema[category] and args.stat in schema[category]["operations"]:
-        uom = 'c'
-        break
-    if "bytes" in schema[category] and args.stat in schema[category]["bytes"]:
-        uom = 'B'
-        break
-    if "percent" in schema[category] and args.stat in schema[category]["percent"]:
-        uom = '%'
-        break
+if "pct" in args.stat:
+    units = '%'
+# All Byte metrics have "bytes" in the name except the values in this set.
+elif "bytes" in args.stat or args.stat in {"ibtr_memory_used", "nbtr_memory_used", "si_accounted_memory"}:
+    units = 'B'
 
 
 ###
@@ -743,7 +738,7 @@ else:
                 RETURN_VAL=STATE_CRITICAL
 
 # Append Unit of measurement
-perf_stat = str(value)+uom
+perf_stat = str(value)+units
         
 ###
 ## Print stat information and the return code for Nagios
