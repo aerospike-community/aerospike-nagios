@@ -479,7 +479,7 @@ if not all(arg is None for arg in conditional_args) and args.namespace is None:
 user = None
 password = None
 
-if args.user != None:
+if args.user is not None:
     user = args.user
     if args.password == "prompt":
         args.password = getpass.getpass("Enter Password:")
@@ -650,19 +650,19 @@ if args.stat in latency_time:
         if t == args.stat:
             value = s[1].split(",")[n]
             args.stat = ">" + args.stat
-        if value != None:
+        if value is not None:
             stat_line = 'Aerospike Stats - ' + arg_value + ": " + args.stat + "=" + value
 elif args.set:
     value = search(r, args.stat, delim=':')
-    if value != None:
+    if value is not None:
         stat_line = 'Aerospike Stats - ' + args.stat + "=" + value
 elif args.bin:
     value = search(r, args.stat, delim=',')
-    if value != None:
+    if value is not None:
         stat_line = 'Aerospike Stats - ' + args.stat + "=" + value
 else:
     value = search(r, args.stat)
-    if value != None:
+    if value is not None:
         stat_line = 'Aerospike Stats - ' + args.stat + "=" + value
 
 #
