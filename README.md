@@ -43,15 +43,20 @@ See requirements.txt.
    > /etc/nagios/conf.d if installed from repo  
    > /usr/local/nagios/etc/objects if installed from source
 
-4. Edit aerospike.cfg to add your aerospike hosts into the hostgroup
+**Note:** If you are using nrpe to monitor a remote client use the contents 
+of `nrpe/` instead. Information for configuring nrpe can be found in the nrpe
+documentation.
+
+4. Edit examples/aerospike.cfg
+  - Add your aerospike hosts into the hostgroup
+  - Change examples to reflect your current aerospike configuration
 
 5. Edit nagios.cfg by adding a cfg_file directive that points to the location of aerospike.cfg.
     >cfg_file=/etc/nagios/conf.d if installed from repo  
     >cfg_file=/usr/local/nagios/etc/objects if installed from source
   **Note:** Not required if cfg_dir directive is being used.
 
-5. Restart/reload nagios
-
+6. Restart/reload nagios
 
 ### Aerospike nagios Plugin
 
