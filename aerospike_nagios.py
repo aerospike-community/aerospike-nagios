@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # A short utility program which pings a given host and requests the 'info' about
 # either all names or a certain name
@@ -25,7 +25,6 @@ __copyright__ = "Copyright 2020 Aerospike"
 __version__ = "3.0.0"
 
 import sys
-import yaml
 import socket
 import re
 import argparse
@@ -41,8 +40,6 @@ STATE_CRITICAL=2
 STATE_UNKNOWN=3
 STATE_DEPENDENT=4
 
-
-schema_path = '/opt/aerospike/bin/aerospike_schema.yaml'
 stat_line = None
 
 DEFAULT_TIMEOUT = 5
@@ -251,10 +248,11 @@ class Client(object):
     def _send_request(self, request, info_msg_version=2, info_msg_type=1):
         if request:
             request += '\n'
-
+        # struct.pack() used bytes in python 3
+        request_bytes = bytes(request, 'utf-8')
         proto = (info_msg_version << 56) | (info_msg_type << 48) | (len(request)+1)
         fmt_str = "! Q %ds B" % len(request)
-        buf = struct.pack(fmt_str, proto, request, 10)
+        buf = struct.pack(fmt_str, proto, request_bytes, 10)
 
         self._send(buf)
 
@@ -285,7 +283,8 @@ class Client(object):
             q = struct.unpack_from('! Q', buf, 0)
             sz = q[0] & 0xFFFFFFFFFFFF
             if sz > 0:
-                return self._recv(sz)
+                response_bytes = self._recv(sz)
+                return response_bytes.decode('utf-8')
         except Exception as ex:
             raise IOError("Error: %s" % str(ex))
 
@@ -664,13 +663,6 @@ else:
     value = search(r, args.stat)
     if value is not None:
         stat_line = 'Aerospike Stats - ' + args.stat + "=" + value
-
-#
-# Load schema file
-#
-with open(schema_path) as schema_file:
-    schema = yaml.load(schema_file)
-
 
 #
 # Find  unit of measurement for the statstic
