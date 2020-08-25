@@ -180,7 +180,7 @@ class Client(object):
             send_buf = self._admin_write_header(sz, _LOGIN, 2)
             fmt_str = "! I B %ds I B %ds" % (len(user), len(credential))
             struct.pack_into(fmt_str, send_buf, _HEADER_SIZE,
-                             len(user) + 1, _USER_FIELD_ID, user,
+                             len(user) + 1, _USER_FIELD_ID, user.encode(),
                              len(credential) + 1, _CREDENTIAL_FIELD_ID, credential)
 
         else:
@@ -188,14 +188,14 @@ class Client(object):
             send_buf = self._admin_write_header(sz, _LOGIN, 3)
             fmt_str = "! I B %ds I B %ds I B %ds" % (len(user), len(credential), len(password))
             struct.pack_into(fmt_str, send_buf, _HEADER_SIZE,
-                             len(user) + 1, _USER_FIELD_ID, user,
+                             len(user) + 1, _USER_FIELD_ID, user.encode(),
                              len(credential) + 1, _CREDENTIAL_FIELD_ID, credential,
-                             len(password) + 1, _CLEAR_PASSWORD_FIELD_ID, password)
+                             len(password) + 1, _CLEAR_PASSWORD_FIELD_ID, password.encode())
 
         try:
             # OpenSSL wrapper doesn't support ctypes
             send_buf = self._buffer_to_string(send_buf)
-            self.sock.sendall(send_buf)
+            self.sock.sendall(send_buf.encode())
             recv_buff = self._recv(_HEADER_SIZE)
             rv = self._admin_parse_header(recv_buff)
 
@@ -248,11 +248,9 @@ class Client(object):
     def _send_request(self, request, info_msg_version=2, info_msg_type=1):
         if request:
             request += '\n'
-        # struct.pack() used bytes in python 3
-        request_bytes = bytes(request, 'utf-8')
         proto = (info_msg_version << 56) | (info_msg_type << 48) | (len(request)+1)
         fmt_str = "! Q %ds B" % len(request)
-        buf = struct.pack(fmt_str, proto, request_bytes, 10)
+        buf = struct.pack(fmt_str, proto, request.encode(), 10)
 
         self._send(buf)
 
@@ -301,7 +299,7 @@ class Client(object):
                 # fatal when authentication is required.
                 raise e
 
-            return bcrypt.hashpw(password, "$2a$10$7EqJtq98hPqEX7fNZaFWoO")
+            return bcrypt.hashpw(password.encode(), b"$2a$10$7EqJtq98hPqEX7fNZaFWoO")
 
         return ""
 
@@ -321,7 +319,7 @@ class Client(object):
     def _buffer_to_string(self, buf):
         buf_str = ""
         for s in buf:
-            buf_str += s
+            buf_str += s.decode()
         return buf_str
 
     def _authenticate(self, user, password, password_field_id):
