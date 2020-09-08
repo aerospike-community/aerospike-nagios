@@ -439,7 +439,7 @@ parser.add_argument("--tls-keyfile"
                     , help="The private keyfile for your client TLS Cert")
 parser.add_argument("--tls-keyfile-pw"
                     , dest="tls_keyfile_pw"
-                    , help="Password to load protected tls_keyfile")
+                    , help="Password to load protected tls-keyfile")
 parser.add_argument("--tls-certfile"
                     , dest="tls_certfile"
                     , help="The client TLS cert")
@@ -451,7 +451,7 @@ parser.add_argument("--tls-capath"
                     , help="The path to a directory containing CA certs and/or CRLs")
 parser.add_argument("--tls-ciphers"
                     , dest="tls_ciphers"
-                    , help="Ciphers to include. See https://www.openssl.org/docs/man1.0.1/apps/ciphers.html for cipher list format")
+                    , help="Ciphers to include. See https://www.openssl.org/docs/man1.1.0/man1/ciphers.html for cipher list format")
 parser.add_argument("--tls-protocols"
                     , dest="tls_protocols"
                     , help="The TLS protocol to use. Available choices: TLSv1, TLSv1.1, TLSv1.2, all. An optional + or - can be appended before the protocol to indicate specific inclusion or exclusion.")
@@ -461,7 +461,7 @@ parser.add_argument("--tls-cert-blacklist"
 parser.add_argument("--tls-crl-check"
                     , dest="tls_crl_check"
                     , action="store_true"
-                    , help="Checks SSL/TLS certs against vendor's Certificate Revocation Lists for revoked certificates. CRLs are found in path specified by --tls_capath. Checks the leaf certificates only")
+                    , help="Checks SSL/TLS certs against vendor's Certificate Revocation Lists for revoked certificates. CRLs are found in path specified by --tls-capath. Checks the leaf certificates only")
 parser.add_argument("--tls-crl-check-all"
                     , dest="tls_crl_check_all"
                     , action="store_true"
