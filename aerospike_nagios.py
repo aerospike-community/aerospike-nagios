@@ -34,11 +34,11 @@ import getpass
 from ctypes import create_string_buffer
 
 # Nagios error codes:
-STATE_OK=0
-STATE_WARNING=1
-STATE_CRITICAL=2
-STATE_UNKNOWN=3
-STATE_DEPENDENT=4
+STATE_OK = 0
+STATE_WARNING = 1
+STATE_CRITICAL = 2
+STATE_UNKNOWN = 3
+STATE_DEPENDENT = 4
 
 stat_line = None
 
@@ -100,7 +100,7 @@ AuthMode = Enumeration([
 ])
 
 class ClientError(Exception):
-        pass
+    pass
 
 class Client(object):
 
@@ -225,7 +225,7 @@ class Client(object):
     def info(self, request):
         self._send_request(request)
         res = self._recv_response()
-        out = re.split("\s+", res, maxsplit=1)
+        out = re.split(r"\s+", res, maxsplit=1)
 
         if len(out) == 2:
             if out[0].strip("") != request:
@@ -426,7 +426,7 @@ parser.add_argument("--timeout"
                     , dest="timeout"
                     , default=DEFAULT_TIMEOUT
                     , help="Set timeout value in seconds to node level operations. " +
-                           "TLS connection does not support timeout. (default: %(default)s)")
+                    "TLS connection does not support timeout. (default: %(default)s)")
 parser.add_argument("--tls-enable"
                     , action="store_true"
                     , dest="tls_enable"
@@ -484,7 +484,7 @@ if args.user is not None:
 
 if args.credentials:
     try:
-        cred_file = open(args.credentials,'r')
+        cred_file = open(args.credentials, 'r')
         user = cred_file.readline().strip()
         password = cred_file.readline().strip()
     except IOError:
@@ -493,16 +493,18 @@ if args.credentials:
 # Takes a range in the format of [@]start:end
 # Negative values also ok
 # See Nagios guidelines: https://nagios-plugins.org/doc/guidelines.html#THRESHOLDFORMAT
-NAGIOS_OUTER_THRESHOLD=0        # alert if ouside range of { start ... end }        eg: 10:20
-NAGIOS_INNER_THRESHOLD=1        # alert if inside range of { start ... end }        eg: @10:20
+NAGIOS_OUTER_THRESHOLD = 0        # alert if ouside range of { start ... end }        eg: 10:20
+NAGIOS_INNER_THRESHOLD = 1        # alert if inside range of { start ... end }        eg: @10:20
 
 
 def parse_range(range_arg):
     # check syntax
     range_arg = range_arg.strip()
-    match = re.match("^@?(-?\d+|~)$|^@?(-?\d*|~):(-?\d+)?$", range_arg)
+    match = re.match(r"^@?(-?\d+|~)$|^@?(-?\d*|~):(-?\d+)?$", range_arg)
     if not match:
-        print("Threshold format is incorrect. The format is: [@]start:end. Entered value: %s"%(range_arg))
+        print("Threshold format is incorrect. The format is: [@]start:end. Entered value: %s" % (
+            range_arg
+        ))
         sys.exit(STATE_UNKNOWN)
 
     # theshold mode
@@ -510,7 +512,7 @@ def parse_range(range_arg):
     val_range = range_arg
     if val_range.startswith("@"):
         val_range = val_range.strip("@")
-        mode=NAGIOS_INNER_THRESHOLD
+        mode = NAGIOS_INNER_THRESHOLD
 
     # grab start/end values
 
@@ -537,7 +539,7 @@ def parse_range(range_arg):
             print("Error: start threshold is greater than the end threshold: %s"%(range_arg))
             sys.exit(STATE_UNKNOWN)
 
-    return { "start": start, "end" : end, "mode" : mode }
+    return {"start": start, "end" : end, "mode" : mode}
 
 def is_outside(value, start, end):
     if start != '~' and value < start:
@@ -575,10 +577,14 @@ if user:
     try:
         status = client.auth(username=user, password=password, auth_mode=args.auth_mode)
         if status != 0:
-            print("Failed to authenticate connection to the Aerospike cluster at %s:%s, status: %s"%(args.host,args.port, str(status)))
+            print("Failed to authenticate connection to the Aerospike cluster at %s:%s, status: %s" % (
+                args.host, args.port, str(status)
+            ))
             sys.exit(STATE_UNKNOWN)
     except Exception as e:
-        print("Failed to authenticate connection to the Aerospike cluster at %s:%s"%(args.host,args.port))
+        print("Failed to authenticate connection to the Aerospike cluster at %s:%s" % (
+            args.host, args.port
+        ))
         print(e)
         sys.exit(STATE_UNKNOWN)
 
@@ -589,44 +595,48 @@ try:
     version = client.info(req).split('.')
 
 except Exception as e:
-        print("Failed to execute asinfo command %s on the Aerospike cluster at %s:%s"%(req, args.host, args.port))
-        print(e)
-        sys.exit(STATE_UNKNOWN)
+    print("Failed to execute asinfo command %s on the Aerospike cluster at %s:%s" % (
+        req, args.host, args.port
+    ))
+    print(e)
+    sys.exit(STATE_UNKNOWN)
 
 if args.dc:
-        arg_value='dc/'+args.dc
+    arg_value = 'dc/'+args.dc
 
-        # Version 5.0+ got removed dc/DC_NAME and added get-stats:context=xdr;dc=DC_NAME
-        if int(version[0]) >= 5:
-            arg_value='get-stats:context=xdr;dc='+args.dc
+    # Version 5.0+ got removed dc/DC_NAME and added get-stats:context=xdr;dc=DC_NAME
+    if int(version[0]) >= 5:
+        arg_value = 'get-stats:context=xdr;dc='+args.dc
 
 # namespace must be checked after sets, bins, and sindex
 elif args.set:
-    arg_value='sets/'+args.namespace+'/'+args.set
+    arg_value = 'sets/' + args.namespace + '/' + args.set
 elif args.bin:
-    arg_value='bins/'+args.namespace
+    arg_value = 'bins/' + args.namespace
 elif args.sindex:
-    arg_value='sindex/'+args.namespace+'/'+args.sindex
+    arg_value = 'sindex/' + args.namespace + '/' + args.sindex
 elif args.namespace:
-    arg_value='namespace/'+args.namespace
+    arg_value = 'namespace/' + args.namespace
 elif args.latency:
-    arg_value='latency:hist='+args.latency
+    arg_value = 'latency:hist=' + args.latency
 
 try:
     r = client.info(arg_value).strip()
 except Exception as e:
-    print("Failed to execute asinfo command %s on the Aerospike cluster at %s:%s"%(arg_value, args.host, args.port))
+    print("Failed to execute asinfo command %s on the Aerospike cluster at %s:%s" % (
+        arg_value, args.host, args.port
+    ))
     print(e)
     sys.exit(STATE_UNKNOWN)
 
 client.close()
 
 if r == None:
-    print("request to ",args.host,":",args.port," returned no data.")
+    print("request to ", args.host, ":", args.port, " returned no data.")
     sys.exit(STATE_CRITICAL)
 
 if r == -1:
-    print("request to ",args.host,":",args.port," returned error.")
+    print("request to ", args.host, ":", args.port, " returned error.")
     sys.exit(STATE_CRITICAL)
 
 if args.stat not in r:
@@ -678,28 +688,29 @@ elif "bytes" in args.stat or args.stat in {"ibtr_memory_used", "nbtr_memory_used
 ###
 ## Comparing the Aerospike value with the warning/critical passed values.
 ## Default comparison is if the Aerospike value is greater than the warning/critical value.
-## Stats with "pct" in them are checked to see if the Aerospike value is less than the warning/critical value.
+## Stats with "pct" in them are checked to see if the Aerospike value is less than 
+## the warning/critical value.
 
 
 #
 # Parse warn/crit ranges
 
-RETURN_VAL=STATE_OK
-append_perf=False
+RETURN_VAL = STATE_OK
+append_perf = False
 if "dc_state" in args.stat:
     if value != 'CLUSTER_UP':
-        RETURN_VAL=STATE_CRITICAL
-elif args.stat in ["stop_writes","system_swapping","hwm_breached","stop-writes","hwm-breached"]:
+        RETURN_VAL = STATE_CRITICAL
+elif args.stat in ["stop_writes", "system_swapping", "hwm_breached", "stop-writes" ,"hwm-breached"]:
     if value == 'true':
-        RETURN_VAL=STATE_CRITICAL
+        RETURN_VAL = STATE_CRITICAL
 elif args.stat in ["cluster_integrity"]:
     if value == 'false':
-        RETURN_VAL=STATE_CRITICAL
+        RETURN_VAL = STATE_CRITICAL
 else:
     # Append perfdata iff metric value is numeric
     try:
         value = float(value)
-        append_perf=True
+        append_perf = True
     except:
         pass
 
@@ -709,11 +720,11 @@ else:
 
         if warn["mode"] == NAGIOS_OUTER_THRESHOLD:
             if is_outside(value, warn["start"], warn["end"]):
-                RETURN_VAL=STATE_WARNING
+                RETURN_VAL = STATE_WARNING
 
         else: # NAGIOS_INNER_THRESHOLD
             if not is_outside(value, warn["start"], warn["end"]):
-                RETURN_VAL=STATE_WARNING
+                RETURN_VAL = STATE_WARNING
 
     # Critical threshold override warning threshold
     if args.crit != "0":
@@ -721,22 +732,22 @@ else:
 
         if crit["mode"] == NAGIOS_OUTER_THRESHOLD:
             if is_outside(value, crit["start"], crit["end"]):
-                RETURN_VAL=STATE_CRITICAL
+                RETURN_VAL = STATE_CRITICAL
 
         else: # NAGIOS_INNER_THRESHOLD
             if not is_outside(value, crit["start"], crit["end"]):
-                RETURN_VAL=STATE_CRITICAL
+                RETURN_VAL = STATE_CRITICAL
 
 # Append Unit of measurement
 perf_stat = str(value)+units
-        
+    
 ###
 ## Print stat information and the return code for Nagios
 ##
 
 if stat_line != "":
     if append_perf:
-        print('%s|%s=%s;%s;%s' % (stat_line,args.stat,perf_stat,args.warn,args.crit))
+        print('%s|%s=%s;%s;%s' % (stat_line, args.stat, perf_stat, args.warn, args.crit))
     else:
         print('%s' % (stat_line))
     sys.exit(RETURN_VAL)
