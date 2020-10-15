@@ -589,8 +589,8 @@ if user:
         sys.exit(STATE_UNKNOWN)
 
 arg_value = "statistics"
-
 req = 'build'
+
 try:
     version = client.info(req).split('.')
 
@@ -601,11 +601,14 @@ except Exception as e:
     print(e)
     sys.exit(STATE_UNKNOWN)
 
+use_new_xdr = int(version[0]) >= 5
+use_new_latencies = int(version[0]) >= 5 and int(version[1]) >= 1
+
 if args.dc:
     arg_value = 'dc/'+args.dc
 
     # Version 5.0+ removed dc/DC_NAME and added get-stats:context=xdr;dc=DC_NAME
-    if int(version[0]) >= 5:
+    if use_new_xdr:
         arg_value = 'get-stats:context=xdr;dc='+args.dc
 
 # namespace must be checked after sets, bins, and sindex
@@ -620,7 +623,7 @@ elif args.namespace:
 elif args.latency:
     arg_value = 'latency:hist=' + args.latency
 
-    if int(version[0]) >= 5 and int(version[1]) >= 1:
+    if use_new_latencies:
         arg_value = 'latencies:hist=' + args.latency
 
 try:
@@ -670,7 +673,7 @@ if args.latency:
     latency_unit = 'ms'
     latency_buckets = ["1", "8", "64"]
 
-    if int(version[0]) >= 5 and int(version[1]) >= 1:
+    if use_new_latencies:
         latency_buckets = ["1", "2", "4", "8", "16", "32", "64", "128", "256", 
             "512", "1024", "2048", "4096", "8192", "16384", "32768", "65536"]
         if 'usec' in resp:
@@ -698,21 +701,28 @@ if args.latency:
         n += 1
         if t == bucket:
             value = None
-            if int(version[0]) >= 5 and int(version[1]) >= 1:
+            if use_new_latencies:
                 value = s[0].split(",")[n]
             else:
                 value = s[1].split(",")[n]
 
             args.stat = ">" + args.stat
             stat_line = 'Aerospike Stats - ' + arg_value + ": " + args.stat + "=" + value
+
+# Example resp: objects=100010:tombstones=0:memory_data_bytes=0:truncate_lut=0: /
+# stop-writes-count=0:disable-eviction=false;
 elif args.set:
     value = search(resp, args.stat, delim=':')
     if value is not None:
         stat_line = 'Aerospike Stats - ' + args.stat + "=" + value
+# Example resp: bin_names=3,bin_names_quota=65535,age,0,name
 elif args.bin:
     value = search(resp, args.stat, delim=',')
     if value is not None:
         stat_line = 'Aerospike Stats - ' + args.stat + "=" + value
+# SIndex, Namespace, service, and dc/XDR stats have the same format.
+# Example resp: keys=10;entries=10;ibtr_memory_used=18432;nbtr_memory_used=310; \
+# si_accounted_memory=18742;load_pct=100;loadtime=0;write_success=10 
 else:
     value = search(resp, args.stat)
     if value is not None:
