@@ -602,7 +602,7 @@ except Exception as e:
     sys.exit(STATE_UNKNOWN)
 
 use_new_xdr = int(version[0]) >= 5
-use_new_latencies = int(version[0]) >= 5 and int(version[1]) >= 1
+use_new_latencies = int(version[0]) > 5 or (int(version[0]) == 5 and int(version[1]) >= 1)
 
 if args.dc:
     arg_value = 'dc/'+args.dc
