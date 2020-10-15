@@ -401,7 +401,7 @@ parser.add_argument("-s"
                     , "--stat"
                     , dest="stat"
                     , required=True
-                    , help="Statistic name. eg: cluster_size")
+                    , help="Statistic name or in the case of --latency, as bucket. eg: cluster_size or 1ms")
 parser.add_argument("-p"
                     , "---port"
                     , dest="port"

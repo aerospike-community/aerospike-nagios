@@ -20,7 +20,7 @@ The goal is to reduce the complexity to 2 simple steps.
   - `$ asinfo -v 'bins/<NAMESPACE NAME>' [-h host]`
   - `$ asinfo -v 'sindex/<NAMESPACE NAME>/<SINDEX NAME>' [-h host]`
   - `$ asinfo -v 'get-stats:context=xdr;dc=<DATACENTER>' [-h host]` or `$ asinfo -v 'dc/<DATACENTER>' [-h host]`
-  - `$ asinfo -v 'latency:hist=<LATCENCY STAT>' [-h host]`
+  - `$ asinfo -v 'latency:hist=<LATCENCY STAT>' [-h host]` or `$ asinfo -v 'latencies:hist=<LATCENCY STAT>' [-h host]`
 
 ### Requirements
 Additional python modules are required and installed using pip:
@@ -93,13 +93,15 @@ optional arguments:
                         Path to the credentials file. Use this in place of
                         --user and --password.
   --auth-mode AUTH_MODE
-                        Authentication mode. Values: ['EXTERNAL_INSECURE',
-                        'INTERNAL', 'EXTERNAL'] (default: INTERNAL)
+                        Authentication mode. Values: ['EXTERNAL',
+                        'EXTERNAL_INSECURE', 'INTERNAL'] (default: INTERNAL)
   -v, --verbose         Enable verbose logging
   -n NAMESPACE, --namespace NAMESPACE
                         Namespace name. eg: bar
   -l LATENCY, --latency LATENCY
-                        Options: see output of asinfo -v 'latency:hist' -l
+                        Histogram name e.g. {test}-write Options: see output
+                        of "asinfo -v 'latency:hist' -l" or "asinfo -v
+                        'latencies:hist -l "
   -x DC, --xdr DC       Datacenter name. eg: myDC1.
   -t SET, --set SET     Set name. eg: testSet. Statistic for a particular set
                         in a particular namespace.
@@ -107,7 +109,8 @@ optional arguments:
   -i SINDEX, --sindex SINDEX
                         Secondary Index name. eg: age. Statistic for a
                         particular secondary index in a particular namespace.
-  -s STAT, --stat STAT  Statistic name. eg: cluster_size
+  -s STAT, --stat STAT  Statistic name or in the case of --latency, as bucket.
+                        eg: cluster_size or 1ms
   -p PORT, ---port PORT
                         PORT for Aerospike server (default: 3000)
   -h HOST, --host HOST  HOST for Aerospike server (default: 127.0.0.1)
@@ -145,8 +148,6 @@ optional arguments:
                         found in path specified by --tls-capath. Checks the
                         leaf certificates only
   --tls-crl-check-all   Check on all entries within the CRL chain
-
-
 ```
 ```
          -U user (Enterprise only)
@@ -184,16 +185,23 @@ To monitor a specific metric in xdr:
 aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -x DATACENTER -w WARN_LEVEL -c CRIT_LEVEL
 ```
 
-To monitor latency statistics (pre-3.9):  
+To monitor latency statistics (ASD <= 3.9):  
 ```
-aerospike_nagios.py -h YOUR_ASD_HOST -s <1ms|8ms|64ms>  -l <reads|writes|writes_reply|proxy> -w WARN_LEVEL -c CRIT_LEVEL
+aerospike_nagios.py -h YOUR_ASD_HOST -s BUCKET -l HISTOGRAM -w WARN_LEVEL -c CRIT_LEVEL
 ```
+For possible values of HISTOGRAM run "asinfo -v 'latency:hist' -l"
+BUCKETS = <1ms|8ms|64ms>
 
-To monitor latency statistics (ASD 3.9+):
+To monitor latency statistics (ASD > 3.9):
 ```
-aerospike_nagios.py -h YOUR_ASD_HOST -s <1ms|8ms|64ms>  -l {NAMESPACE}-<read|write|proxy|udf> -w WARN_LEVEL -c CRIT_LEVEL
+aerospike_nagios.py -h YOUR_ASD_HOST -s BUCKET -l {NAMESPACE}-HISTOGRAM -w WARN_LEVEL -c CRIT_LEVEL
 ```
-eg: `aerospike_nagios.py -h localhost -s 1ms  -l {test}-read -w 8 -c 10`
+For possible values of HISTOGRAM run "asinfo -v 'latency:hist' -l" or "asinfo -v 'latencies:hist' -l"
+eg: `aerospike_nagios.py -h localhost -s 1ms -l {test}-read -w 8 -c 10`
+BUCKETS = <1ms|8ms|64ms> for (3.9 < ASD < 5.1)
+BUCKETS = <2**i from i = 0 to i = 17> for (ASD >= 5.1)
+Note: For ASD 5.1+ bucket units can also be in microseconds if the histogram 
+is configured correctly. For example `65536us` could be a valid BUCKET.
 
 To utilize SSL/TLS standard auth:
 ```
