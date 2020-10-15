@@ -377,7 +377,7 @@ group1.add_argument("-n"
 group1.add_argument("-l"
                     , "--latency"
                     , dest="latency"
-                    , help="Options: see output of asinfo -v 'latency:hist' -l")
+                    , help="Histogram name e.g. {test}-write Options: see output of \"asinfo -v 'latency:hist' -l\" or \"asinfo -v 'latencies:hist -l \"")
 group1.add_argument("-x"
                     , "--xdr"
                     , dest="dc"
@@ -604,7 +604,7 @@ except Exception as e:
 if args.dc:
     arg_value = 'dc/'+args.dc
 
-    # Version 5.0+ got removed dc/DC_NAME and added get-stats:context=xdr;dc=DC_NAME
+    # Version 5.0+ removed dc/DC_NAME and added get-stats:context=xdr;dc=DC_NAME
     if int(version[0]) >= 5:
         arg_value = 'get-stats:context=xdr;dc='+args.dc
 
@@ -620,8 +620,11 @@ elif args.namespace:
 elif args.latency:
     arg_value = 'latency:hist=' + args.latency
 
+    if int(version[0]) >= 5 and int(version[1]) >= 1:
+        arg_value = 'latencies:hist=' + args.latency
+
 try:
-    r = client.info(arg_value).strip()
+    resp = client.info(arg_value).strip()
 except Exception as e:
     print("Failed to execute asinfo command %s on the Aerospike cluster at %s:%s" % (
         arg_value, args.host, args.port
@@ -631,44 +634,87 @@ except Exception as e:
 
 client.close()
 
-if r == None:
+if resp == None:
     print("request to ", args.host, ":", args.port, " returned no data.")
     sys.exit(STATE_CRITICAL)
 
-if r == -1:
+if resp == -1:
     print("request to ", args.host, ":", args.port, " returned error.")
     sys.exit(STATE_CRITICAL)
 
-if args.stat not in r:
+if args.stat not in resp and not args.latency:
     print("%s is not a known statistic." %args.stat)
     sys.exit(STATE_UNKNOWN)
 
 # Remove trailing ";" if there is one.
-if r.endswith(";"):
-    r = r[:-1]
+if resp.endswith(";"):
+    resp = resp[:-1]
 
+'''
+Example latency response (pre 5.1):
+error-no-data-yet-or-back-too-small;{test}-read:20:52:11-GMT,ops/sec, \
+>1ms,>8ms,>64ms;20:52:21,46973.8,0.00,0.00,0.00;{test}-write:20:52:11-GMT, \
+ops/sec,>1ms,>8ms,>64ms;20:52:21,46968.7,0.00,0.00,0.00; \
+error-no-data-yet-or-back-too-small;error-no-data-yet-or-back-too-small; \
+
+Example latencies response (5.1+) with variable metric units:
+batch-index:;{test}-read:usec,39550.9,100.00,100.00,100.00,81.61,59.74, \
+54.47,41.02,17.33,3.80,0.97,0.33,0.10,0.03,0.01,0.00,0.00,0.00;{test}-write: \
+usec,39539.9,100.00,100.00,100.00,94.33,63.22,56.92,46.06,22.15,5.02,1.21, \
+0.40,0.13,0.04,0.01,0.00,0.00,0.00;{test}-udf:;{test}-query:;{bar}-read:; \
+{bar}-write:;{bar}-udf:;{bar}-query:
+'''
 value = None
-latency_time = ["1ms", "8ms", "64ms"]
-if args.stat in latency_time:
-    s = r.split(";")
+
+if args.latency:
+    latency_unit = 'ms'
+    latency_buckets = ["1", "8", "64"]
+
+    if int(version[0]) >= 5 and int(version[1]) >= 1:
+        latency_buckets = ["1", "2", "4", "8", "16", "32", "64", "128", "256", 
+            "512", "1024", "2048", "4096", "8192", "16384", "32768", "65536"]
+        if 'usec' in resp:
+            latency_unit = 'us'
+
+    s = resp.split(";")
+
+    try:
+        m = re.match(r'(\d+)([mu]s)', args.stat)
+        bucket, unit = m.group(1, 2)
+        
+        if 'bad-hist-name' in resp:
+            raise Exception('%s is not a known histogram.' % args.latency)
+        # 'no-data-yet' is for latency, the latter is for an empty latencies ex. ['{test}-query:']
+        if 'no-data-yet' in resp or s[0].split(':')[1] == '':
+            raise Exception('%s does not have enough latency data' % args.latency)
+        if unit != latency_unit or bucket not in latency_buckets:
+            raise Exception('%s is not a known statistic.' % args.stat)
+    except Exception as e:
+        print(e)
+        sys.exit(STATE_UNKNOWN)
+
     n = 1
-    for t in latency_time:
+    for t in latency_buckets:
         n += 1
-        if t == args.stat:
-            value = s[1].split(",")[n]
+        if t == bucket:
+            value = None
+            if int(version[0]) >= 5 and int(version[1]) >= 1:
+                value = s[0].split(",")[n]
+            else:
+                value = s[1].split(",")[n]
+
             args.stat = ">" + args.stat
-        if value is not None:
             stat_line = 'Aerospike Stats - ' + arg_value + ": " + args.stat + "=" + value
 elif args.set:
-    value = search(r, args.stat, delim=':')
+    value = search(resp, args.stat, delim=':')
     if value is not None:
         stat_line = 'Aerospike Stats - ' + args.stat + "=" + value
 elif args.bin:
-    value = search(r, args.stat, delim=',')
+    value = search(resp, args.stat, delim=',')
     if value is not None:
         stat_line = 'Aerospike Stats - ' + args.stat + "=" + value
 else:
-    value = search(r, args.stat)
+    value = search(resp, args.stat)
     if value is not None:
         stat_line = 'Aerospike Stats - ' + args.stat + "=" + value
 
