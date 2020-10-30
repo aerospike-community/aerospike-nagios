@@ -1,10 +1,10 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # A short utility program which pings a given host and requests the 'info' about
 # either all names or a certain name
 #
 
-# Copyright 2013-2019 Aerospike, Inc.
+# Copyright 2013-2020 Aerospike, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,11 +21,10 @@
 # Description: Nagios script for Aerospike
 
 __author__ = "Aerospike"
-__copyright__ = "Copyright 2019 Aerospike"
-__version__ = "2.0.0"
+__copyright__ = "Copyright 2020 Aerospike"
+__version__ = "3.0.0"
 
 import sys
-import yaml
 import socket
 import re
 import argparse
@@ -35,15 +34,12 @@ import getpass
 from ctypes import create_string_buffer
 
 # Nagios error codes:
-STATE_OK=0
-STATE_WARNING=1
-STATE_CRITICAL=2
-STATE_UNKNOWN=3
-STATE_DEPENDENT=4
+STATE_OK = 0
+STATE_WARNING = 1
+STATE_CRITICAL = 2
+STATE_UNKNOWN = 3
+STATE_DEPENDENT = 4
 
-
-schema_path = '/opt/aerospike/bin/aerospike_schema.yaml'
-arg_value = "statistics"
 stat_line = None
 
 DEFAULT_TIMEOUT = 5
@@ -104,7 +100,7 @@ AuthMode = Enumeration([
 ])
 
 class ClientError(Exception):
-        pass
+    pass
 
 class Client(object):
 
@@ -159,7 +155,7 @@ class Client(object):
             except Exception as msg:
                 s.close()
                 s = None
-                print "Connect Error %s" % msg
+                print("Connect Error %s" % msg)
                 continue
 
             break
@@ -184,7 +180,7 @@ class Client(object):
             send_buf = self._admin_write_header(sz, _LOGIN, 2)
             fmt_str = "! I B %ds I B %ds" % (len(user), len(credential))
             struct.pack_into(fmt_str, send_buf, _HEADER_SIZE,
-                             len(user) + 1, _USER_FIELD_ID, user,
+                             len(user) + 1, _USER_FIELD_ID, user.encode(),
                              len(credential) + 1, _CREDENTIAL_FIELD_ID, credential)
 
         else:
@@ -192,14 +188,14 @@ class Client(object):
             send_buf = self._admin_write_header(sz, _LOGIN, 3)
             fmt_str = "! I B %ds I B %ds I B %ds" % (len(user), len(credential), len(password))
             struct.pack_into(fmt_str, send_buf, _HEADER_SIZE,
-                             len(user) + 1, _USER_FIELD_ID, user,
+                             len(user) + 1, _USER_FIELD_ID, user.encode(),
                              len(credential) + 1, _CREDENTIAL_FIELD_ID, credential,
-                             len(password) + 1, _CLEAR_PASSWORD_FIELD_ID, password)
+                             len(password) + 1, _CLEAR_PASSWORD_FIELD_ID, password.encode())
 
         try:
             # OpenSSL wrapper doesn't support ctypes
             send_buf = self._buffer_to_string(send_buf)
-            self.sock.sendall(send_buf)
+            self.sock.sendall(send_buf.encode())
             recv_buff = self._recv(_HEADER_SIZE)
             rv = self._admin_parse_header(recv_buff)
 
@@ -229,7 +225,7 @@ class Client(object):
     def info(self, request):
         self._send_request(request)
         res = self._recv_response()
-        out = re.split("\s+", res, maxsplit=1)
+        out = re.split(r"\s+", res, maxsplit=1)
 
         if len(out) == 2:
             if out[0].strip("") != request:
@@ -252,10 +248,9 @@ class Client(object):
     def _send_request(self, request, info_msg_version=2, info_msg_type=1):
         if request:
             request += '\n'
-
         proto = (info_msg_version << 56) | (info_msg_type << 48) | (len(request)+1)
         fmt_str = "! Q %ds B" % len(request)
-        buf = struct.pack(fmt_str, proto, request, 10)
+        buf = struct.pack(fmt_str, proto, request.encode(), 10)
 
         self._send(buf)
 
@@ -286,7 +281,8 @@ class Client(object):
             q = struct.unpack_from('! Q', buf, 0)
             sz = q[0] & 0xFFFFFFFFFFFF
             if sz > 0:
-                return self._recv(sz)
+                response_bytes = self._recv(sz)
+                return response_bytes.decode('utf-8')
         except Exception as ex:
             raise IOError("Error: %s" % str(ex))
 
@@ -303,7 +299,7 @@ class Client(object):
                 # fatal when authentication is required.
                 raise e
 
-            return bcrypt.hashpw(password, "$2a$10$7EqJtq98hPqEX7fNZaFWoO")
+            return bcrypt.hashpw(password.encode(), b"$2a$10$7EqJtq98hPqEX7fNZaFWoO")
 
         return ""
 
@@ -323,7 +319,7 @@ class Client(object):
     def _buffer_to_string(self, buf):
         buf_str = ""
         for s in buf:
-            buf_str += s
+            buf_str += s.decode()
         return buf_str
 
     def _authenticate(self, user, password, password_field_id):
@@ -373,24 +369,39 @@ parser.add_argument("-v"
                     , action="store_true"
                     , dest="verbose"
                     , help="Enable verbose logging")
-group = parser.add_mutually_exclusive_group()
-group.add_argument("-n"
+group1 = parser.add_mutually_exclusive_group()
+group1.add_argument("-n"
                     , "--namespace"
                     , dest="namespace"
                     , help="Namespace name. eg: bar")
-group.add_argument("-l"
+group1.add_argument("-l"
                     , "--latency"
                     , dest="latency"
-                    , help="Options: see output of asinfo -v 'latency:hist' -l")
-group.add_argument("-x"
+                    , help="Histogram name e.g. {test}-write Options: see output of \"asinfo -v 'latency:hist' -l\" or \"asinfo -v 'latencies:hist -l \"")
+group1.add_argument("-x"
                     , "--xdr"
                     , dest="dc"
-                    , help="Datacenter name. eg: myDC1")
+                    , help="Datacenter name. eg: myDC1.")
+group2 = parser.add_mutually_exclusive_group()
+group2.add_argument("-t"
+                    , "--set"
+                    , dest="set"
+                    , help="Set name. eg: testSet. Statistic for a particular set in a particular namespace.")
+group2.add_argument("-b"
+                    , "--bin"
+                    , dest="bin"
+                    , action="store_const"
+                    , const=True
+                    , help="Bin usage information for a particular namspace.")
+group2.add_argument("-i"
+                    , "--sindex"
+                    , dest="sindex"
+                    , help="Secondary Index name. eg: age. Statistic for a particular secondary index in a particular namespace.")
 parser.add_argument("-s"
                     , "--stat"
                     , dest="stat"
                     , required=True
-                    , help="Statistic name. eg: cluster_size")
+                    , help="Statistic name or in the case of --latency, as bucket. eg: cluster_size or 1ms")
 parser.add_argument("-p"
                     , "---port"
                     , dest="port"
@@ -415,7 +426,7 @@ parser.add_argument("--timeout"
                     , dest="timeout"
                     , default=DEFAULT_TIMEOUT
                     , help="Set timeout value in seconds to node level operations. " +
-                           "TLS connection does not support timeout. (default: %(default)s)")
+                    "TLS connection does not support timeout. (default: %(default)s)")
 parser.add_argument("--tls-enable"
                     , action="store_true"
                     , dest="tls_enable"
@@ -428,7 +439,7 @@ parser.add_argument("--tls-keyfile"
                     , help="The private keyfile for your client TLS Cert")
 parser.add_argument("--tls-keyfile-pw"
                     , dest="tls_keyfile_pw"
-                    , help="Password to load protected tls_keyfile")
+                    , help="Password to load protected tls-keyfile")
 parser.add_argument("--tls-certfile"
                     , dest="tls_certfile"
                     , help="The client TLS cert")
@@ -440,7 +451,7 @@ parser.add_argument("--tls-capath"
                     , help="The path to a directory containing CA certs and/or CRLs")
 parser.add_argument("--tls-ciphers"
                     , dest="tls_ciphers"
-                    , help="Ciphers to include. See https://www.openssl.org/docs/man1.0.1/apps/ciphers.html for cipher list format")
+                    , help="Ciphers to include. See https://www.openssl.org/docs/man1.1.0/man1/ciphers.html for cipher list format")
 parser.add_argument("--tls-protocols"
                     , dest="tls_protocols"
                     , help="The TLS protocol to use. Available choices: TLSv1, TLSv1.1, TLSv1.2, all. An optional + or - can be appended before the protocol to indicate specific inclusion or exclusion.")
@@ -450,7 +461,7 @@ parser.add_argument("--tls-cert-blacklist"
 parser.add_argument("--tls-crl-check"
                     , dest="tls_crl_check"
                     , action="store_true"
-                    , help="Checks SSL/TLS certs against vendor's Certificate Revocation Lists for revoked certificates. CRLs are found in path specified by --tls_capath. Checks the leaf certificates only")
+                    , help="Checks SSL/TLS certs against vendor's Certificate Revocation Lists for revoked certificates. CRLs are found in path specified by --tls-capath. Checks the leaf certificates only")
 parser.add_argument("--tls-crl-check-all"
                     , dest="tls_crl_check_all"
                     , action="store_true"
@@ -458,17 +469,14 @@ parser.add_argument("--tls-crl-check-all"
 
 args = parser.parse_args()
 
-if args.dc:
-  arg_value='dc/'+args.dc
-elif args.namespace:
-  arg_value='namespace/'+args.namespace
-elif args.latency:
-  arg_value='latency:hist='+args.latency
+conditional_args = [args.set, args.bin, args.sindex]
+if not all(arg is None for arg in conditional_args) and args.namespace is None:
+    parser.error("--set, --bin, and --sindex require --namespace")
 
 user = None
 password = None
 
-if args.user != None:
+if args.user is not None:
     user = args.user
     if args.password == "prompt":
         args.password = getpass.getpass("Enter Password:")
@@ -476,25 +484,27 @@ if args.user != None:
 
 if args.credentials:
     try:
-        cred_file = open(args.credentials,'r')
+        cred_file = open(args.credentials, 'r')
         user = cred_file.readline().strip()
         password = cred_file.readline().strip()
     except IOError:
-        print "Unable to read credentials file: %s"%args.credentials
+        print("Unable to read credentials file: %s"%args.credentials)
 
 # Takes a range in the format of [@]start:end
 # Negative values also ok
 # See Nagios guidelines: https://nagios-plugins.org/doc/guidelines.html#THRESHOLDFORMAT
-NAGIOS_OUTER_THRESHOLD=0        # alert if ouside range of { start ... end }        eg: 10:20
-NAGIOS_INNER_THRESHOLD=1        # alert if inside range of { start ... end }        eg: @10:20
+NAGIOS_OUTER_THRESHOLD = 0        # alert if ouside range of { start ... end }        eg: 10:20
+NAGIOS_INNER_THRESHOLD = 1        # alert if inside range of { start ... end }        eg: @10:20
 
 
 def parse_range(range_arg):
     # check syntax
     range_arg = range_arg.strip()
-    match = re.match("^@?(-?\d+|~)$|^@?(-?\d*|~):(-?\d+)?$", range_arg)
+    match = re.match(r"^@?(-?\d+|~)$|^@?(-?\d*|~):(-?\d+)?$", range_arg)
     if not match:
-        print "Threshold format is incorrect. The format is: [@]start:end. Entered value: %s"%(range_arg)
+        print("Threshold format is incorrect. The format is: [@]start:end. Entered value: %s" % (
+            range_arg
+        ))
         sys.exit(STATE_UNKNOWN)
 
     # theshold mode
@@ -502,7 +512,7 @@ def parse_range(range_arg):
     val_range = range_arg
     if val_range.startswith("@"):
         val_range = val_range.strip("@")
-        mode=NAGIOS_INNER_THRESHOLD
+        mode = NAGIOS_INNER_THRESHOLD
 
     # grab start/end values
 
@@ -526,10 +536,10 @@ def parse_range(range_arg):
 
     if start != '~' and end != '~':
         if float(start) > float(end):
-            print "Error: start threshold is greater than the end threshold: %s"%(range_arg)
+            print("Error: start threshold is greater than the end threshold: %s"%(range_arg))
             sys.exit(STATE_UNKNOWN)
 
-    return { "start": start, "end" : end, "mode" : mode }
+    return {"start": start, "end" : end, "mode" : mode}
 
 def is_outside(value, start, end):
     if start != '~' and value < start:
@@ -539,6 +549,13 @@ def is_outside(value, start, end):
         return True
 
     return False
+
+def search(res, name, delim=';'):
+    for s in res.split()[-1].split(delim):    # remove leading category, then split k=v tuples
+        if s.startswith(name + "="):
+            value = s.split(name + "=")[-1]
+            return value
+    return None
 
 #
 # MAINLINE
@@ -553,109 +570,203 @@ try:
                    tls_crl_check=args.tls_crl_check, tls_crl_check_all=args.tls_crl_check_all,)
 except Exception as e:
     print("Failed to connect to the Aerospike cluster at %s:%s"%(args.host,args.port))
-    print e
+    print(e)
     sys.exit(STATE_UNKNOWN)
 
 if user:
     try:
         status = client.auth(username=user, password=password, auth_mode=args.auth_mode)
         if status != 0:
-            print("Failed to authenticate connection to the Aerospike cluster at %s:%s, status: %s"%(args.host,args.port, str(status)))
+            print("Failed to authenticate connection to the Aerospike cluster at %s:%s, status: %s" % (
+                args.host, args.port, str(status)
+            ))
             sys.exit(STATE_UNKNOWN)
     except Exception as e:
-        print("Failed to authenticate connection to the Aerospike cluster at %s:%s"%(args.host,args.port))
-        print e
+        print("Failed to authenticate connection to the Aerospike cluster at %s:%s" % (
+            args.host, args.port
+        ))
+        print(e)
         sys.exit(STATE_UNKNOWN)
 
+arg_value = "statistics"
+req = 'build'
+
 try:
-    r = client.info(arg_value).strip()
+    version = client.info(req).split('.')
+
 except Exception as e:
-    print("Failed to execute asinfo command %s on the Aerospike cluster at %s:%s"%(arg_value, args.host, args.port))
-    print e
+    print("Failed to execute asinfo command %s on the Aerospike cluster at %s:%s" % (
+        req, args.host, args.port
+    ))
+    print(e)
+    sys.exit(STATE_UNKNOWN)
+
+use_new_xdr = int(version[0]) >= 5
+use_new_latencies = int(version[0]) > 5 or (int(version[0]) == 5 and int(version[1]) >= 1)
+
+if args.dc:
+    arg_value = 'dc/'+args.dc
+
+    # Version 5.0+ removed dc/DC_NAME and added get-stats:context=xdr;dc=DC_NAME
+    if use_new_xdr:
+        arg_value = 'get-stats:context=xdr;dc='+args.dc
+
+# namespace must be checked after sets, bins, and sindex
+elif args.set:
+    arg_value = 'sets/' + args.namespace + '/' + args.set
+elif args.bin:
+    arg_value = 'bins/' + args.namespace
+elif args.sindex:
+    arg_value = 'sindex/' + args.namespace + '/' + args.sindex
+elif args.namespace:
+    arg_value = 'namespace/' + args.namespace
+elif args.latency:
+    arg_value = 'latency:hist=' + args.latency
+
+    if use_new_latencies:
+        arg_value = 'latencies:hist=' + args.latency
+
+try:
+    resp = client.info(arg_value).strip()
+except Exception as e:
+    print("Failed to execute asinfo command %s on the Aerospike cluster at %s:%s" % (
+        arg_value, args.host, args.port
+    ))
+    print(e)
     sys.exit(STATE_UNKNOWN)
 
 client.close()
 
-if r == None:
-    print "request to ",args.host,":",args.port," returned no data."
+if resp == None:
+    print("request to ", args.host, ":", args.port, " returned no data.")
     sys.exit(STATE_CRITICAL)
 
-if r == -1:
-    print "request to ",args.host,":",args.port," returned error."
+if resp == -1:
+    print("request to ", args.host, ":", args.port, " returned error.")
     sys.exit(STATE_CRITICAL)
 
-if args.stat not in r:
-    print "%s is not a known statistic." %args.stat
+if args.stat not in resp and not args.latency:
+    print("%s is not a known statistic." %args.stat)
     sys.exit(STATE_UNKNOWN)
 
-value = None
-latency_time = ["1ms", "8ms", "64ms"]
-if args.stat in latency_time:
-    s = r.split(";")
-    n = 1
-    for t in latency_time:
-        n += 1
-        if t == args.stat:
-            value = s[1].split(",")[n]
-            args.stat = ">" + args.stat
-        if value != None:
-            stat_line = 'Aerospike Stats - ' + arg_value + ": " + args.stat + "=" + value
-else:
-    for s in r.split()[-1].split(";"):    # remove leading category, then split k=v tuples
-        if s.startswith(args.stat + "="):
-            value = s.split(args.stat + "=")[-1]
-        if value != None:
-            stat_line = 'Aerospike Stats - ' + args.stat + "=" + value
+# Remove trailing ";" if there is one.
+if resp.endswith(";"):
+    resp = resp[:-1]
 
-#
-# Load schema file
-#
-with open(schema_path) as schema_file:
-    schema = yaml.load(schema_file, Loader=yaml.SafeLoader)
+'''
+Example latency response (pre 5.1):
+error-no-data-yet-or-back-too-small;{test}-read:20:52:11-GMT,ops/sec, \
+>1ms,>8ms,>64ms;20:52:21,46973.8,0.00,0.00,0.00;{test}-write:20:52:11-GMT, \
+ops/sec,>1ms,>8ms,>64ms;20:52:21,46968.7,0.00,0.00,0.00; \
+error-no-data-yet-or-back-too-small;error-no-data-yet-or-back-too-small; \
+
+Example latencies response (5.1+) with variable metric units:
+batch-index:;{test}-read:usec,39550.9,100.00,100.00,100.00,81.61,59.74, \
+54.47,41.02,17.33,3.80,0.97,0.33,0.10,0.03,0.01,0.00,0.00,0.00;{test}-write: \
+usec,39539.9,100.00,100.00,100.00,94.33,63.22,56.92,46.06,22.15,5.02,1.21, \
+0.40,0.13,0.04,0.01,0.00,0.00,0.00;{test}-udf:;{test}-query:;{bar}-read:; \
+{bar}-write:;{bar}-udf:;{bar}-query:
+'''
+value = None
+
+if args.latency:
+    latency_unit = 'ms'
+    latency_buckets = ["1", "8", "64"]
+
+    if use_new_latencies:
+        latency_buckets = ["1", "2", "4", "8", "16", "32", "64", "128", "256", 
+            "512", "1024", "2048", "4096", "8192", "16384", "32768", "65536"]
+        if 'usec' in resp:
+            latency_unit = 'us'
+
+    s = resp.split(";")
+
+    try:
+        m = re.match(r'(\d+)([mu]s)', args.stat)
+        bucket, unit = m.group(1, 2)
+        
+        if 'bad-hist-name' in resp:
+            raise Exception('%s is not a known histogram.' % args.latency)
+        # 'no-data-yet' is for latency, the latter is for an empty latencies ex. ['{test}-query:']
+        if 'no-data-yet' in resp or s[0].split(':')[1] == '':
+            raise Exception('%s does not have enough latency data' % args.latency)
+        if unit != latency_unit or bucket not in latency_buckets:
+            raise Exception('%s is not a known statistic.' % args.stat)
+    except Exception as e:
+        print(e)
+        sys.exit(STATE_UNKNOWN)
+
+    n = 1
+    for t in latency_buckets:
+        n += 1
+        if t == bucket:
+            value = None
+            if use_new_latencies:
+                value = s[0].split(",")[n]
+            else:
+                value = s[1].split(",")[n]
+
+            args.stat = ">" + args.stat
+            stat_line = 'Aerospike Stats - ' + arg_value + ": " + args.stat + "=" + value
+
+# Example resp: objects=100010:tombstones=0:memory_data_bytes=0:truncate_lut=0: /
+# stop-writes-count=0:disable-eviction=false;
+elif args.set:
+    value = search(resp, args.stat, delim=':')
+    if value is not None:
+        stat_line = 'Aerospike Stats - ' + args.stat + "=" + value
+# Example resp: bin_names=3,bin_names_quota=65535,age,0,name
+elif args.bin:
+    value = search(resp, args.stat, delim=',')
+    if value is not None:
+        stat_line = 'Aerospike Stats - ' + args.stat + "=" + value
+# SIndex, Namespace, service, and dc/XDR stats have the same format.
+# Example resp: keys=10;entries=10;ibtr_memory_used=18432;nbtr_memory_used=310; \
+# si_accounted_memory=18742;load_pct=100;loadtime=0;write_success=10 
+else:
+    value = search(resp, args.stat)
+    if value is not None:
+        stat_line = 'Aerospike Stats - ' + args.stat + "=" + value
 
 #
 # Find  unit of measurement for the statstic
 #
 
-uom = ''
+units = ''
 
-for category in schema:
-    if "operations" in schema[category] and args.stat in schema[category]["operations"]:
-        uom = 'c'
-        break
-    if "bytes" in schema[category] and args.stat in schema[category]["bytes"]:
-        uom = 'B'
-        break
-    if "percent" in schema[category] and args.stat in schema[category]["percent"]:
-        uom = '%'
-        break
+if "pct" in args.stat:
+    units = '%'
+# All Byte metrics have "bytes" in the name except the values in this set.
+elif "bytes" in args.stat or args.stat in {"ibtr_memory_used", "nbtr_memory_used", "si_accounted_memory"}:
+    units = 'B'
 
 
 ###
 ## Comparing the Aerospike value with the warning/critical passed values.
 ## Default comparison is if the Aerospike value is greater than the warning/critical value.
-## Stats with "pct" in them are checked to see if the Aerospike value is less than the warning/critical value.
+## Stats with "pct" in them are checked to see if the Aerospike value is less than 
+## the warning/critical value.
 
 
 #
 # Parse warn/crit ranges
 
-RETURN_VAL=STATE_OK
-append_perf=False
+RETURN_VAL = STATE_OK
+append_perf = False
 if "dc_state" in args.stat:
     if value != 'CLUSTER_UP':
-        RETURN_VAL=STATE_CRITICAL
-elif args.stat in ["stop_writes","system_swapping","hwm_breached","stop-writes","hwm-breached"]:
+        RETURN_VAL = STATE_CRITICAL
+elif args.stat in ["stop_writes", "system_swapping", "hwm_breached", "stop-writes" ,"hwm-breached"]:
     if value == 'true':
-        RETURN_VAL=STATE_CRITICAL
+        RETURN_VAL = STATE_CRITICAL
 elif args.stat in ["cluster_integrity"]:
     if value == 'false':
-        RETURN_VAL=STATE_CRITICAL
+        RETURN_VAL = STATE_CRITICAL
 else:
     # Append perfdata iff metric value is numeric
     try:
         value = float(value)
-        append_perf=True
+        append_perf = True
     except:
         pass
 
@@ -665,11 +776,11 @@ else:
 
         if warn["mode"] == NAGIOS_OUTER_THRESHOLD:
             if is_outside(value, warn["start"], warn["end"]):
-                RETURN_VAL=STATE_WARNING
+                RETURN_VAL = STATE_WARNING
 
         else: # NAGIOS_INNER_THRESHOLD
             if not is_outside(value, warn["start"], warn["end"]):
-                RETURN_VAL=STATE_WARNING
+                RETURN_VAL = STATE_WARNING
 
     # Critical threshold override warning threshold
     if args.crit != "0":
@@ -677,22 +788,22 @@ else:
 
         if crit["mode"] == NAGIOS_OUTER_THRESHOLD:
             if is_outside(value, crit["start"], crit["end"]):
-                RETURN_VAL=STATE_CRITICAL
+                RETURN_VAL = STATE_CRITICAL
 
         else: # NAGIOS_INNER_THRESHOLD
             if not is_outside(value, crit["start"], crit["end"]):
-                RETURN_VAL=STATE_CRITICAL
+                RETURN_VAL = STATE_CRITICAL
 
 # Append Unit of measurement
-perf_stat = str(value)+uom
-        
+perf_stat = str(value)+units
+    
 ###
 ## Print stat information and the return code for Nagios
 ##
 
 if stat_line != "":
     if append_perf:
-        print '%s|%s=%s;%s;%s' % (stat_line,args.stat,perf_stat,args.warn,args.crit) 
+        print('%s|%s=%s;%s;%s' % (stat_line, args.stat, perf_stat, args.warn, args.crit))
     else:
-        print '%s' % (stat_line)
+        print('%s' % (stat_line))
     sys.exit(RETURN_VAL)

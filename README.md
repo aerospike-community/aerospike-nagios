@@ -16,8 +16,11 @@ The goal is to reduce the complexity to 2 simple steps.
 - Can monitor any stat returned by
   - `$ asinfo -v 'statistics' [-h host]`
   - `$ asinfo -v 'namespace/<NAMESPACE NAME>' [-h host]`
-  - `$ asinfo -v 'dc/<DATACENTER>' [-h host]`
-  - `$ asinfo -v 'latency:hist=<LATCENCY STAT>' [-h host]`
+  - `$ asinfo -v 'sets/<NAMESPACE NAME>/<SET NAME>' [-h host]`
+  - `$ asinfo -v 'bins/<NAMESPACE NAME>' [-h host]`
+  - `$ asinfo -v 'sindex/<NAMESPACE NAME>/<SINDEX NAME>' [-h host]`
+  - `$ asinfo -v 'get-stats:context=xdr;dc=<DATACENTER>' [-h host]` or `$ asinfo -v 'dc/<DATACENTER>' [-h host]`
+  - `$ asinfo -v 'latency:hist=<LATCENCY STAT>' [-h host]` or `$ asinfo -v 'latencies:hist=<LATCENCY STAT>' [-h host]`
 
 ### Requirements
 Additional python modules are required and installed using pip:
@@ -40,10 +43,20 @@ See requirements.txt.
    > /etc/nagios/conf.d if installed from repo  
    > /usr/local/nagios/etc/objects if installed from source
 
-4. Edit aerospike.cfg to add your aerospike hosts into the hostgroup
+**Note:** If you are using nrpe to monitor a remote client use the contents 
+of `nrpe/` instead. Information for configuring nrpe can be found in the nrpe
+documentation.
 
-5. Restart/reload nagios
+4. Edit examples/aerospike.cfg
+  - Add your aerospike hosts into the hostgroup
+  - Change examples to reflect your current aerospike configuration
 
+5. Edit nagios.cfg by adding a cfg_file directive that points to the location of aerospike.cfg.
+    >cfg_file=/etc/nagios/conf.d if installed from repo  
+    >cfg_file=/usr/local/nagios/etc/objects if installed from source
+  **Note:** Not required if cfg_dir directive is being used.
+
+6. Restart/reload nagios
 
 ### Aerospike nagios Plugin
 
@@ -58,10 +71,11 @@ $ python /opt/aerospike/bin/aerospike_nagios.py --help
 usage: aerospike_nagios.py [-u] [-U USER] [-P [PASSWORD]]
                            [--credentials-file CREDENTIALS]
                            [--auth-mode AUTH_MODE] [-v]
-                           [-n NAMESPACE | -l LATENCY | -x DC] -s STAT
-                           [-p PORT] [-h HOST] -c CRIT -w WARN
-                           [--timeout TIMEOUT] [--tls-enable]
-                           [--tls-name TLS_NAME] [--tls-keyfile TLS_KEYFILE]
+                           [-n NAMESPACE | -l LATENCY | -x DC]
+                           [-t SET | -b | -i SINDEX] -s STAT [-p PORT]
+                           [-h HOST] -c CRIT -w WARN [--timeout TIMEOUT]
+                           [--tls-enable] [--tls-name TLS_NAME]
+                           [--tls-keyfile TLS_KEYFILE]
                            [--tls-keyfile-pw TLS_KEYFILE_PW]
                            [--tls-certfile TLS_CERTFILE]
                            [--tls-cafile TLS_CAFILE] [--tls-capath TLS_CAPATH]
@@ -79,15 +93,24 @@ optional arguments:
                         Path to the credentials file. Use this in place of
                         --user and --password.
   --auth-mode AUTH_MODE
-                        Authentication mode. Values: ['EXTERNAL_INSECURE',
-                        'INTERNAL', 'EXTERNAL'] (default: INTERNAL)
+                        Authentication mode. Values: ['EXTERNAL',
+                        'EXTERNAL_INSECURE', 'INTERNAL'] (default: INTERNAL)
   -v, --verbose         Enable verbose logging
   -n NAMESPACE, --namespace NAMESPACE
                         Namespace name. eg: bar
   -l LATENCY, --latency LATENCY
-                        Options: see output of asinfo -v 'latency:hist' -l
-  -x DC, --xdr DC       Datacenter name. eg: myDC1
-  -s STAT, --stat STAT  Statistic name. eg: cluster_size
+                        Histogram name e.g. {test}-write Options: see output
+                        of "asinfo -v 'latency:hist' -l" or "asinfo -v
+                        'latencies:hist -l "
+  -x DC, --xdr DC       Datacenter name. eg: myDC1.
+  -t SET, --set SET     Set name. eg: testSet. Statistic for a particular set
+                        in a particular namespace.
+  -b, --bin             Bin usage information for a particular namspace.
+  -i SINDEX, --sindex SINDEX
+                        Secondary Index name. eg: age. Statistic for a
+                        particular secondary index in a particular namespace.
+  -s STAT, --stat STAT  Statistic name or in the case of --latency, as bucket.
+                        eg: cluster_size or 1ms
   -p PORT, ---port PORT
                         PORT for Aerospike server (default: 3000)
   -h HOST, --host HOST  HOST for Aerospike server (default: 127.0.0.1)
@@ -102,7 +125,7 @@ optional arguments:
   --tls-keyfile TLS_KEYFILE
                         The private keyfile for your client TLS Cert
   --tls-keyfile-pw TLS_KEYFILE_PW
-                        Password to load protected --tls-keyfile
+                        Password to load protected tls-keyfile
   --tls-certfile TLS_CERTFILE
                         The client TLS cert
   --tls-cafile TLS_CAFILE
@@ -125,7 +148,6 @@ optional arguments:
                         found in path specified by --tls-capath. Checks the
                         leaf certificates only
   --tls-crl-check-all   Check on all entries within the CRL chain
-
 ```
 ```
          -U user (Enterprise only)
@@ -138,26 +160,48 @@ To monitor a specific general statistic:
 aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -w WARN_LEVEL -c CRIT_LEVEL
 ```
 
-To monitor a specific statistic in a namepsace:  
+To monitor a specific metric in a namepsace:  
 ```
 aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -n YOUR_NAMESPACE -w WARN_LEVEL -c CRIT_LEVEL
 ```
 
-To monitor a specfic statistic in xdr:  
+To monitor a specific metric in a set:  
+```
+aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -n YOUR_NAMESPACE -t YOUR_SET -w WARN_LEVEL -c CRIT_LEVEL
+```
+
+To monitor a specific metric in bins:  
+```
+aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -n YOUR_NAMESPACE -b -w WARN_LEVEL -c CRIT_LEVEL
+```
+
+To monitor a specific metric in a sindex:  
+```
+aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -n YOUR_NAMESPACE -i YOUR_SINDEX -w WARN_LEVEL -c CRIT_LEVEL
+```
+
+To monitor a specific metric in xdr:  
 ```
 aerospike_nagios.py -h YOUR_ASD_HOST -s STAT_NAME -x DATACENTER -w WARN_LEVEL -c CRIT_LEVEL
 ```
 
-To monitor latency statistics (pre-3.9):  
+To monitor latency statistics (ASD <= 3.9):  
 ```
-aerospike_nagios.py -h YOUR_ASD_HOST -s <1ms|8ms|64ms>  -l <reads|writes|writes_reply|proxy> -w WARN_LEVEL -c CRIT_LEVEL
+aerospike_nagios.py -h YOUR_ASD_HOST -s BUCKET -l HISTOGRAM -w WARN_LEVEL -c CRIT_LEVEL
 ```
+For possible values of HISTOGRAM run "asinfo -v 'latency:hist' -l"
+BUCKETS = <1ms|8ms|64ms>
 
-To monitor latency statistics (ASD 3.9+):
+To monitor latency statistics (ASD > 3.9):
 ```
-aerospike_nagios.py -h YOUR_ASD_HOST -s <1ms|8ms|64ms>  -l {NAMESPACE}-<read|write|proxy|udf> -w WARN_LEVEL -c CRIT_LEVEL
+aerospike_nagios.py -h YOUR_ASD_HOST -s BUCKET -l {NAMESPACE}-HISTOGRAM -w WARN_LEVEL -c CRIT_LEVEL
 ```
-eg: `aerospike_nagios.py -h localhost -s 1ms  -l {test}-read -w 8 -c 10`
+For possible values of HISTOGRAM run "asinfo -v 'latency:hist' -l" or "asinfo -v 'latencies:hist' -l"
+eg: `aerospike_nagios.py -h localhost -s 1ms -l {test}-read -w 8 -c 10`
+BUCKETS = <1ms|8ms|64ms> for (3.9 < ASD < 5.1)
+BUCKETS = <2**i from i = 0 to i = 17> for (ASD >= 5.1)
+Note: For ASD 5.1+ bucket units can also be in microseconds if the histogram 
+is configured correctly. For example `65536us` could be a valid BUCKET.
 
 To utilize SSL/TLS standard auth:
 ```
