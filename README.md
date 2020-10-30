@@ -1,9 +1,9 @@
 # Introduction
 
-aerospike\_nagios.py simplifies nagios configurations for Aerospike clusters.
+`aerospike_nagios.py` simplifies nagios configurations for Aerospike clusters.
 The goal is to reduce the complexity to 2 simple steps.
 
-1. Copy aerospike\_nagios.py and dependencies to your Nagios server
+1. Copy `aerospike_nagios.py` and dependencies to your Nagios server
 2. Add aerospike configs into Nagios
 
 ## Community Development
