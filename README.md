@@ -1,8 +1,3 @@
-# Note:
-
-The previous implementation of the nagios plugin has been moved to the
-`legacy` branch.
-
 # Introduction
 
 aerospike\_nagios.py simplifies nagios configurations for Aerospike clusters.
@@ -11,7 +6,15 @@ The goal is to reduce the complexity to 2 simple steps.
 1. Copy aerospike\_nagios.py and dependencies to your Nagios server
 2. Add aerospike configs into Nagios
 
-# Features
+## Community Development
+This repository has been turned over to the community. If you wish to contribute code, go ahead and clone this repo, modify the code, and create a pull request.
+
+Active contributors can then ask to become maintainers for the repo. The wiki can similarly be modified by any code contributor who has been granted pull permissions.
+
+## Compatibility
+Fully compatible with Aerospike Server 4.0 - 5.1.0.7 
+
+## Features
 
 - Can monitor any stat returned by
   - `$ asinfo -v 'statistics' [-h host]`
@@ -226,3 +229,8 @@ It is a simple 2 line file, with the username and password on each line, in that
 With this method, the credentials file can be secured via other means (eg: chmod 600) and prevent snooping.
 
 `AuthMode` is optional parameter to specify authentication mode. It's default value is INTERNAL.
+
+## Note:
+
+The previous implementation of the nagios plugin has been moved to the
+`legacy` branch.
