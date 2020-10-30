@@ -1,0 +1,8 @@
+argparse
+pyyaml
+
+# if using auth
+#bcrypt
+
+# if using SSL/TLS
+#pyOpenSSL==18.0.0
